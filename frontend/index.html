@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SwiftShare - Modern File Transfer</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><i class="fas fa-paper-plane"></i> SwiftShare</h1>
+      <p>Modern file transfer with style</p>
+      <button id="themeToggle" class="theme-toggle" title="Toggle dark mode">
+        <i class="fas fa-moon"></i>
+      </button>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" id="sendTab">
+        <i class="fas fa-upload"></i> Send
+      </button>
+      <button class="tab" id="receiveTab">
+        <i class="fas fa-download"></i> Receive
+      </button>
+    </div>
+
+    <!-- Send Section -->
+    <div class="tab-content" id="sendContent">
+      <div class="upload-zone" id="dropArea">
+        <div class="upload-icon">
+          <i class="fas fa-cloud-upload-alt"></i>
+        </div>
+        <h3>Drop files here or <span class="browse-link">browse</span></h3>
+        <p class="max-size-text">Maximum file size: 100MB</p>
+        <input type="file" id="fileInput" multiple hidden accept="image/*,video/*,audio/*,.pdf,.zip,.doc,.docx,.txt" />
+      </div>
+
+      <div class="file-controls">
+        <button id="clearBtn" class="btn clear-btn">
+          <i class="fas fa-trash"></i> Clear All
+        </button>
+        <!-- Upload Files button removed as requested -->
+        <button id="generateCodeBtn" class="btn generate-btn" disabled>
+          <i class="fas fa-key"></i> Generate Code
+        </button>
+      </div>
+
+      <div class="file-list-container">
+        <ul id="fileList" class="file-list"></ul>
+        <div id="overallProgress" class="overall-progress" style="display:none;">
+          <div class="progress-bar">
+            <div class="progress-fill" id="overallProgressFill"></div>
+          </div>
+          <span id="overallProgressText">0%</span>
+        </div>
+      </div>
+
+      <div class="history-panel" id="historyPanel" style="display:none;">
+        <h4>Recent Transfers</h4>
+        <ul id="historyList" class="history-list"></ul>
+      </div>
+    </div>
+
+    <!-- Receive Section -->
+    <div class="tab-content" id="receiveContent" style="display:none;">
+      <div class="receive-section">
+        <div class="receive-input">
+          <label for="receiveInput">Enter 4-digit code or paste link</label>
+          <input type="text" id="receiveInput" placeholder="e.g., 1234 or paste link" maxlength="100" />
+        </div>
+
+        <div class="receive-controls">
+          <button id="scanQrBtn" class="btn scan-btn">
+            <i class="fas fa-qrcode"></i> Scan QR Code
+          </button>
+          <button id="receiveBtn" class="btn receive-btn">
+            <i class="fas fa-download"></i> Download
+          </button>
+        </div>
+
+        <div id="qrModal" class="modal" style="display:none;">
+          <div class="modal-content">
+            <span id="closeScannerBtn" class="close">&times;</span>
+            <video id="qrVideo" width="100%" height="250" autoplay></video>
+          </div>
+        </div>
+
+        <div id="downloadPreview" class="download-preview" style="display:none;">
+          <h4>Download Preview</h4>
+          <div id="downloadFileList" class="download-file-list"></div>
+          <div class="download-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="downloadProgressFill"></div>
+            </div>
+            <span id="downloadProgressText">0%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Code Modal -->
+    <div id="codeModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <span id="closeCodeModal" class="close">&times;</span>
+        <h3>Your 4-digit code</h3>
+      <div class="code-qr-wrapper">
+        <div id="codeDisplay" class="code-display"></div>
+        <div id="qrCodeContainer" class="qr-code-container"></div>
+      </div>
+      
+      <div class="modal-actions">
+        <button id="copyLinkBtn" class="btn copy-btn">
+          <i class="fas fa-copy"></i> Copy Link
+        </button>
+        <button id="shareBtn" class="btn share-btn">
+          <i class="fas fa-share-alt"></i> Share
+        </button>
+        <button id="emailBtn" class="btn email-btn">
+          <i class="fas fa-envelope"></i> Email
+        </button>
+      </div>
+      </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settingsPanel" class="settings-panel" style="display:none;">
+      <h4>Settings</h4>
+      <div class="setting-item">
+        <label>Max File Size</label>
+        <select id="maxFileSize">
+          <option value="50">50MB</option>
+          <option value="100" selected>100MB</option>
+          <option value="500">500MB</option>
+        </select>
+      </div>
+      <div class="setting-item">
+        <label>Link Expiration</label>
+        <select id="linkExpiration">
+          <option value="1">1 hour</option>
+          <option value="24" selected>24 hours</option>
+          <option value="168">7 days</option>
+        </select>
+      </div>
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="notifications" checked />
+          Enable notifications
+        </label>
+      </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quick, simple file transfer</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #fff;
+      color: #111827;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      max-width: 480px;
+      width: 100%;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 0.25rem;
+    }
+    p.subtitle {
+      text-align: center;
+      color: #6b7280;
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #d1d5db;
+      margin-bottom: 1rem;
+    }
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 0.5rem 0;
+      cursor: pointer;
+      font-weight: 600;
+      color: #6b7280;
+      border-bottom: 2px solid transparent;
+      user-select: none;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .tab.active {
+      color: #111827;
+      border-color: #8b5cf6;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .file-dropzone {
+      border: 2px dashed #d1d5db;
+      border-radius: 0.5rem;
+      padding: 2rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      color: #6b7280;
+      user-select: none;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+    .file-dropzone.dragover {
+      background-color: #f3e8ff;
+      border-color: #8b5cf6;
+      color: #7c3aed;
+    }
+    .file-dropzone svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 0.5rem;
+      stroke: currentColor;
+    }
+    .file-dropzone button {
+      margin-top: 0.5rem;
+      padding: 0.5rem 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      background: white;
+      color: #6b7280;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+    .file-dropzone button:hover {
+      background-color: #f3e8ff;
+      border-color: #8b5cf6;
+      color: #7c3aed;
+    }
+    .file-list {
+      margin-top: 1rem;
+      max-height: 160px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.375rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      color: #374151;
+      list-style-type: disc;
+      list-style-position: inside;
+    }
+    .buttons {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .btn {
+      flex: 1;
+      padding: 0.5rem 0;
+      border-radius: 0.375rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.2s;
+    }
+    .btn.clear {
+      background-color: #f9fafb;
+      color: #6b7280;
+      border: 1px solid #d1d5db;
+    }
+    .btn.clear:hover {
+      background-color: #e5e7eb;
+    }
+    .btn.generate {
+      background-color: #8b5cf6;
+      color: white;
+    }
+    .btn.generate:hover {
+      background-color: #7c3aed;
+    }
+    .code-display {
+      margin-top: 1rem;
+      text-align: center;
+      font-family: monospace;
+      font-size: 1.25rem;
+      color: #8b5cf6;
+      font-weight: 700;
+    }
+    .receive-form {
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      padding: 1rem;
+    }
+    .receive-form label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #374151;
+    }
+    .receive-form input {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      box-sizing: border-box;
+    }
+    .receive-form button {
+      width: 100%;
+      padding: 0.5rem;
+      background-color: #8b5cf6;
+      color: white;
+      font-weight: 600;
+      border: none;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .receive-form button:disabled {
+      background-color: #c4b5fd;
+      cursor: not-allowed;
+    }
+    .receive-form button:hover:not(:disabled) {
+      background-color: #7c3aed;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Quick, simple file transfer</h1>
+    <p class="subtitle">Send files in seconds. Clean UI, mobile-friendly</p>
+
+    <div class="tabs" role="tablist" aria-label="File transfer tabs">
+      <div class="tab active" role="tab" tabindex="0" aria-selected="true" aria-controls="send-panel" id="send-tab">Send</div>
+      <div class="tab" role="tab" tabindex="-1" aria-selected="false" aria-controls="receive-panel" id="receive-tab">Receive</div>
+    </div>
+
+    <div id="send-panel" class="tab-content active" role="tabpanel" aria-labelledby="send-tab">
+      <div
+        id="file-dropzone"
+        class="file-dropzone"
+        tabindex="0"
+        aria-label="File upload drop zone"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12v8m0 0l-4-4m4 4l4-4M12 4v8" />
+        </svg>
+        <div>Drag &amp; drop files here, or</div>
+        <button id="browse-btn" type="button">Browse files</button>
+        <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">Max size depends on your browser.</div>
+        <input type="file" id="file-input" multiple style="display:none" />
+      </div>
+
+      <ul id="file-list" class="file-list" aria-live="polite" aria-relevant="additions"></ul>
+
+      <div class="buttons">
+        <button id="clear-btn" class="btn clear" type="button">Clear</button>
+        <button id="generate-btn" class="btn generate" type="button">Generate 4-digit code</button>
+      </div>
+
+      <div id="code-display" class="code-display" aria-live="polite" aria-atomic="true"></div>
+    </div>
+
+    <div id="receive-panel" class="tab-content" role="tabpanel" aria-labelledby="receive-tab">
+      <form class="receive-form" onsubmit="return false;">
+        <label for="code-input">Enter 4-digit code</label>
+        <input type="text" id="code-input" maxlength="4" pattern="\d*" inputmode="numeric" autocomplete="one-time-code" />
+        <button id="receive-btn" type="submit" disabled>Receive</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const tabs = document.querySelectorAll('.tab');
+      const tabContents = document.querySelectorAll('.tab-content');
+
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+            t.setAttribute('tabindex', '-1');
+          });
+          tab.classList.add('active');
+          tab.setAttribute('aria-selected', 'true');
+          tab.setAttribute('tabindex', '0');
+
+          const target = tab.getAttribute('aria-controls');
+          tabContents.forEach(tc => {
+            if (tc.id === target) {
+              tc.classList.add('active');
+            } else {
+              tc.classList.remove('active');
+            }
+          });
+        });
+      });
+
+      const fileDropzone = document.getElementById('file-dropzone');
+      const fileInput = document.getElementById('file-input');
+      const browseBtn = document.getElementById('browse-btn');
+      const fileList = document.getElementById('file-list');
+      const clearBtn = document.getElementById('clear-btn');
+      const generateBtn = document.getElementById('generate-btn');
+      const codeDisplay = document.getElementById('code-display');
+      const codeInput = document.getElementById('code-input');
+      const receiveBtn = document.getElementById('receive-btn');
+
+      let selectedFiles = [];
+
+      function updateFileList() {
+        fileList.innerHTML = '';
+        if (selectedFiles.length === 0) {
+          return;
+        }
+        selectedFiles.forEach(file => {
+          const li = document.createElement('li');
+          li.textContent = file.name;
+          fileList.appendChild(li);
+        });
+      }
+
+      fileDropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        fileDropzone.classList.add('dragover');
+      });
+
+      fileDropzone.addEventListener('dragleave', () => {
+        fileDropzone.classList.remove('dragover');
+      });
+
+      fileDropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileDropzone.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files);
+        selectedFiles = selectedFiles.concat(files);
+        updateFileList();
+      });
+
+      browseBtn.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', () => {
+        const files = Array.from(fileInput.files);
+        selectedFiles = selectedFiles.concat(files);
+        updateFileList();
+      });
+
+      clearBtn.addEventListener('click', () => {
+        selectedFiles = [];
+        updateFileList();
+        codeDisplay.textContent = '';
+      });
+
+      generateBtn.addEventListener('click', () => {
+        const newCode = Math.floor(1000 + Math.random() * 9000).toString();
+        codeDisplay.textContent = `Your code: ${newCode}`;
+      });
+
+      codeInput.addEventListener('input', () => {
+        const val = codeInput.value.replace(/\D/g, '');
+        codeInput.value = val;
+        receiveBtn.disabled = val.length !== 4;
+      });
+
+      receiveBtn.addEventListener('click', () => {
+        alert(`Receive files with code: ${codeInput.value}`);
+      });
+    })();
+  </script>
+</body>
+</html>
