@@ -79,13 +79,15 @@ app.use((req, res, next) => {
 });
 
 // Setup Sequelize with MySQL using environment variables
+// ...existing code...
 const sequelize = new Sequelize(
-  process.env.DB_NAME || 'vaultsend',
-  process.env.DB_USER || 'root',
-  process.env.DB_PASSWORD || '',
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASSWORD,
   {
-    host: process.env.DB_HOST || 'localhost',
-    dialect: 'mysql',
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    dialect: 'postgres', // Changed from 'mysql' to 'postgres'
     logging: false,
     pool: {
       max: 5,
@@ -95,6 +97,7 @@ const sequelize = new Sequelize(
     }
   }
 );
+// ...existing code...
 
 // Define File model
 const File = sequelize.define('File', {
@@ -232,8 +235,8 @@ app.get('/download/:id', async (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
+  res.json({
+    status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
