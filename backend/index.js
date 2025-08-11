@@ -78,8 +78,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Setup Sequelize with MySQL using environment variables
-// ...existing code...
+// Setup Sequelize with PostgreSQL using environment variables
 const sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
@@ -87,7 +86,7 @@ const sequelize = new Sequelize(
   {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
-    dialect: 'postgres', // Changed from 'mysql' to 'postgres'
+    dialect: 'postgres',
     logging: false,
     pool: {
       max: 5,
@@ -97,7 +96,6 @@ const sequelize = new Sequelize(
     }
   }
 );
-// ...existing code...
 
 // Define File model
 const File = sequelize.define('File', {

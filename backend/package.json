@@ -1,7 +1,7 @@
 {
   "name": "vaultsend-backend",
   "version": "1.0.0",
-  "description": "Backend for VaultSend file transfer app",
+  "description": "Backend for SwiftShare file transfer app",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

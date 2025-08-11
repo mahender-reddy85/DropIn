@@ -1,4 +1,4 @@
-# VaultSend Backend
+# SwiftShare Backend
 
 ## Setup
 
