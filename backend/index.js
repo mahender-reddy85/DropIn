@@ -36,7 +36,7 @@ const fileGroups = {};
 
 // ✅ Upload endpoint
 app.post('/api/upload', upload.array('files'), (req, res) => {
-  const code = uuidv4().slice(0, 4).toUpperCase();
+  const code = uuidv4().slice(0, 5).toUpperCase();
   const files = req.files.map(file => ({
     filename: file.filename,
     originalname: file.originalname,
