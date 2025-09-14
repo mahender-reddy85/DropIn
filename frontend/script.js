@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (elements.qrCodeContainer) {
         elements.qrCodeContainer.innerHTML = '';
         new QRCode(elements.qrCodeContainer, {
-          text: currentCode,
+          text: 'https://swift-share-mahi.vercel.app/?code=' + currentCode,
           width: 128,
           height: 128,
           colorDark: '#000000',
@@ -295,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function generateUniqueCode() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
+    return Math.random().toString(36).substring(2, 7).toUpperCase();
   }
 
   function closeCodeModal() {
@@ -495,20 +495,22 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.copyLinkBtn.addEventListener('click', () => {
       const code = elements.codeDisplay.textContent;
       if (!code) return;
-      navigator.clipboard.writeText(code).then(() => {
-        showToast('Code copied to clipboard!');
+      const url = 'https://swift-share-mahi.vercel.app/?code=' + code;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('Link copied to clipboard!');
       }).catch(() => {
-        showToast('Failed to copy code.', true);
+        showToast('Failed to copy link.', true);
       });
     });
 
     elements.shareBtn.addEventListener('click', () => {
       const code = elements.codeDisplay.textContent;
       if (!code) return;
+      const url = 'https://swift-share-mahi.vercel.app/?code=' + code;
       if (navigator.share) {
         navigator.share({
-          title: 'SwiftShare Code',
-          text: 'Use this code to receive files: ' + code,
+          title: 'SwiftShare Files',
+          text: 'Check out these files: ' + url,
         }).catch((error) => {
           showToast('Error sharing: ' + error, true);
         });
@@ -520,14 +522,27 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.emailBtn.addEventListener('click', () => {
       const code = elements.codeDisplay.textContent;
       if (!code) return;
-      const subject = encodeURIComponent('SwiftShare File Transfer Code');
-      const body = encodeURIComponent('Use this code to receive files: ' + code);
+      const url = 'https://swift-share-mahi.vercel.app/?code=' + code;
+      const subject = encodeURIComponent('SwiftShare File Transfer');
+      const body = encodeURIComponent('Check out these files: ' + url);
       window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
     });
   }
 
+  // Handle URL parameters for auto-fill and fetch
+  function handleUrlParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+      elements.receiveInput.value = code.toUpperCase();
+      switchTab('receive');
+      receiveFiles();
+    }
+  }
+
   // Initialize all functionality
   function init() {
+    handleUrlParams();
     initTabs();
     initFileHandling();
     initCodeGeneration();
