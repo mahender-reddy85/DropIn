@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // State management
   let selectedFiles = [];
   let currentCode = null;
+  let qrScanner = null;
 
   // Dark mode toggle
   function initDarkModeToggle() {
@@ -398,19 +399,54 @@ document.addEventListener('DOMContentLoaded', function () {
   function openQrScanner() {
     if (elements.qrModal) {
       elements.qrModal.style.display = 'block';
-      setTimeout(() => {
-        // Simulate scanning the QR code URL
-        const simulatedUrl = 'https://swift-share-mahi.vercel.app/?code=ABCDE';
-        const urlParams = new URLSearchParams(simulatedUrl.split('?')[1]);
-        const simulatedCode = urlParams.get('code');
-        if (simulatedCode) {
-          elements.receiveInput.value = simulatedCode.toUpperCase();
-          showToast('Scanned QR code: ' + simulatedCode);
-          // Simulate navigation to the URL
-          window.location.href = simulatedUrl;
-        }
-        elements.qrModal.style.display = 'none';
-      }, 3000);
+
+      // Initialize QR scanner
+      qrScanner = new Html5QrcodeScanner(
+        "qrReader",
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        /* verbose= */ false
+      );
+
+      qrScanner.render(onScanSuccess, onScanFailure);
+    }
+  }
+
+  function onScanSuccess(decodedText, decodedResult) {
+    console.log(`Code matched = ${decodedText}`, decodedResult);
+
+    // Parse the URL to extract the code
+    try {
+      const url = new URL(decodedText);
+      const code = url.searchParams.get('code');
+      if (code) {
+        elements.receiveInput.value = code.toUpperCase();
+        showToast('Scanned QR code: ' + code);
+        // Navigate to the URL to trigger auto-fetch
+        window.location.href = decodedText;
+      } else {
+        showToast('Invalid QR code format', true);
+      }
+    } catch (error) {
+      showToast('Invalid QR code', true);
+    }
+
+    // Stop scanning and close modal
+    closeQrScanner();
+  }
+
+  function onScanFailure(error) {
+    // console.warn(`Code scan error = ${error}`);
+  }
+
+  function closeQrScanner() {
+    if (qrScanner) {
+      qrScanner.clear().catch(error => {
+        console.error("Failed to clear html5QrcodeScanner. ", error);
+      });
+      qrScanner = null;
+    }
+    if (elements.qrModal) {
+      elements.qrModal.style.display = 'none';
     }
   }
 
@@ -481,14 +517,12 @@ document.addEventListener('DOMContentLoaded', function () {
         closeCodeModal();
       }
       if (e.target === elements.qrModal) {
-        if (elements.qrModal) elements.qrModal.style.display = 'none';
+        closeQrScanner();
       }
     });
 
     if (elements.closeScannerBtn) {
-      elements.closeScannerBtn.addEventListener('click', () => {
-        if (elements.qrModal) elements.qrModal.style.display = 'none';
-      });
+      elements.closeScannerBtn.addEventListener('click', closeQrScanner);
     }
   }
 
