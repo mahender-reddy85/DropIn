@@ -399,9 +399,16 @@ document.addEventListener('DOMContentLoaded', function () {
     if (elements.qrModal) {
       elements.qrModal.style.display = 'block';
       setTimeout(() => {
-        const simulatedCode = 'ABCD12';
-        elements.receiveInput.value = simulatedCode;
-        showToast('Scanned QR code: ' + simulatedCode);
+        // Simulate scanning the QR code URL
+        const simulatedUrl = 'https://swift-share-mahi.vercel.app/?code=ABCDE';
+        const urlParams = new URLSearchParams(simulatedUrl.split('?')[1]);
+        const simulatedCode = urlParams.get('code');
+        if (simulatedCode) {
+          elements.receiveInput.value = simulatedCode.toUpperCase();
+          showToast('Scanned QR code: ' + simulatedCode);
+          // Simulate navigation to the URL
+          window.location.href = simulatedUrl;
+        }
         elements.qrModal.style.display = 'none';
       }, 3000);
     }
