@@ -1,8 +1,10 @@
+const API_BASE_URL = 'https://swiftshare-fr7s.onrender.com';
+
 console.log('Script loaded and DOMContentLoaded event listener attached');
 
 document.addEventListener('DOMContentLoaded', function () {
   console.log('DOMContentLoaded event fired');
-  
+
   // Cache all DOM elements with proper error handling
   const elements = {
     sendTab: document.getElementById('sendTab'),
@@ -28,7 +30,9 @@ document.addEventListener('DOMContentLoaded', function () {
     copyLinkBtn: document.getElementById('copyLinkBtn'),
     shareBtn: document.getElementById('shareBtn'),
     emailBtn: document.getElementById('emailBtn'),
-    themeToggleBtn: document.getElementById('themeToggle')
+    themeToggleBtn: document.getElementById('themeToggle'),
+    downloadPreview: document.getElementById('downloadPreview'),
+    downloadFileList: document.getElementById('downloadFileList')
   };
 
   // State management
@@ -236,33 +240,57 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  function generateCode() {
+  async function generateCode() {
     if (selectedFiles.length === 0) {
       showToast('Please select files first');
       return;
     }
 
-    currentCode = generateUniqueCode();
+    showToast('Uploading files...');
 
-    if (elements.codeDisplay) {
-      elements.codeDisplay.textContent = currentCode;
-    }
+    const formData = new FormData();
+    selectedFiles.forEach(file => {
+      formData.append('files', file);
+    });
 
-    // Generate and display QR code
-    if (elements.qrCodeContainer) {
-      elements.qrCodeContainer.innerHTML = '';
-      new QRCode(elements.qrCodeContainer, {
-        text: currentCode,
-        width: 128,
-        height: 128,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.H
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
+        method: 'POST',
+        body: formData
       });
-    }
 
-    if (elements.codeModal) {
-      elements.codeModal.style.display = 'block';
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      currentCode = data.code;
+
+      if (elements.codeDisplay) {
+        elements.codeDisplay.textContent = currentCode;
+      }
+
+      // Generate and display QR code
+      if (elements.qrCodeContainer) {
+        elements.qrCodeContainer.innerHTML = '';
+        new QRCode(elements.qrCodeContainer, {
+          text: currentCode,
+          width: 128,
+          height: 128,
+          colorDark: '#000000',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
+
+      if (elements.codeModal) {
+        elements.codeModal.style.display = 'block';
+      }
+
+      showToast('Files uploaded successfully!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      showToast('Failed to upload files. Please try again.', true);
     }
   }
 
@@ -289,15 +317,82 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  function receiveFiles() {
-    const code = elements.receiveInput ? elements.receiveInput.value.trim() : '';
+  async function receiveFiles() {
+    const code = elements.receiveInput ? elements.receiveInput.value.trim().toUpperCase() : '';
 
     if (!code) {
       showToast('Please enter a code');
       return;
     }
 
-    showToast('Receiving files with code: ' + code);
+    showToast('Fetching files...');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/info/${code}`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Code not found');
+        } else if (response.status === 410) {
+          throw new Error('Files expired');
+        } else {
+          throw new Error('Failed to fetch files');
+        }
+      }
+
+      const data = await response.json();
+      displayDownloadFiles(data.files, code);
+      showToast('Files ready for download!');
+    } catch (error) {
+      console.error('Receive error:', error);
+      showToast(error.message, true);
+    }
+  }
+
+  function displayDownloadFiles(files, code) {
+    if (!elements.downloadFileList || !elements.downloadPreview) return;
+
+    elements.downloadFileList.innerHTML = '';
+
+    files.forEach(file => {
+      const fileItem = document.createElement('div');
+      fileItem.className = 'file-item';
+
+      const fileSize = formatFileSize(file.size);
+      const fileIcon = getFileIcon(file.mimetype);
+      const safeName = escapeHtml(file.originalname);
+
+      fileItem.innerHTML = `
+        <div class="file-info">
+          <span class="file-icon">${fileIcon}</span>
+          <span class="file-name">${safeName}</span>
+          <span class="file-size">${fileSize}</span>
+        </div>
+        <button class="download-btn" data-filename="${file.filename}" data-code="${code}" aria-label="Download ${safeName}">
+          <i class="fas fa-download"></i>
+        </button>
+      `;
+
+      const downloadBtn = fileItem.querySelector('.download-btn');
+      downloadBtn.addEventListener('click', () => downloadFile(code, file.filename, file.originalname));
+
+      elements.downloadFileList.appendChild(fileItem);
+    });
+
+    if (elements.downloadPreview) {
+      elements.downloadPreview.style.display = 'block';
+    }
+  }
+
+  function downloadFile(code, filename, originalname) {
+    const url = `${API_BASE_URL}/api/download/${code}/${filename}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = originalname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('Download started!');
   }
 
   function openQrScanner() {
