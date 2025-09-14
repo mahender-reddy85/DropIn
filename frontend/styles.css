@@ -239,20 +239,7 @@ h1 i {
   margin-bottom: 0.25rem;
 }
 
-.file-size {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-}
 
-.file-name {
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.file-size {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-}
 
 .remove-btn {
   background: none;
