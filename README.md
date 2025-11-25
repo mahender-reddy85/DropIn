@@ -1,4 +1,4 @@
-# SwiftShare
+# DropIn
 
 A modern, secure file transfer application that allows users to upload files and share them via unique codes or QR codes. Built with a Node.js backend and a responsive HTML/CSS/JavaScript frontend.
 
