@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -14,6 +15,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Serve static files from uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ✅ Create uploads folder if not exists
 const storageDir = path.join(__dirname, 'uploads');
@@ -31,96 +35,125 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// ✅ In-memory storage for files grouped by code
-const fileGroups = {};
-
 // ✅ Upload endpoint
-app.post('/api/upload', upload.array('files'), (req, res) => {
-  const code = uuidv4().slice(0, 5).toUpperCase();
-  const files = req.files.map(file => ({
-    filename: file.filename,
-    originalname: file.originalname,
-    path: file.path,
-    size: file.size,
-    mimetype: file.mimetype
-  }));
+app.post('/api/upload', upload.array('files'), async (req, res) => {
+  try {
+    const code = uuidv4().slice(0, 5).toUpperCase();
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-  fileGroups[code] = {
-    files,
-    expiry: Date.now() + 60 * 60 * 1000 // 1 hour
-  };
+    for (const file of req.files) {
+      await db.execute(
+        'INSERT INTO files (code, filename, originalname, mimetype, size, path, expiry) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [code, file.filename, file.originalname, file.mimetype, file.size, file.path, expiry]
+      );
+    }
 
-  res.json({ code });
+    res.json({ code });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Upload failed' });
+  }
 });
 
 // ✅ Metadata endpoint
-app.get('/api/info/:code', (req, res) => {
-  const code = req.params.code.toUpperCase();
-  const group = fileGroups[code];
+app.get('/api/info/:code', async (req, res) => {
+  try {
+    const code = req.params.code.toUpperCase();
 
-  if (!group) return res.status(404).json({ error: 'Code not found' });
+    // Check if code exists
+    const [existsRows] = await db.execute('SELECT COUNT(*) as count FROM files WHERE code = ?', [code]);
+    if (existsRows[0].count === 0) {
+      return res.status(404).json({ error: 'Code not found' });
+    }
 
-  if (Date.now() > group.expiry) {
-    delete fileGroups[code];
-    return res.status(410).json({ error: 'Files expired' });
+    // Get active files
+    const [rows] = await db.execute(
+      'SELECT filename, originalname, size, mimetype FROM files WHERE code = ? AND expiry > NOW()',
+      [code]
+    );
+
+    if (rows.length === 0) {
+      // All expired, delete the group
+      await db.execute('DELETE FROM files WHERE code = ?', [code]);
+      return res.status(410).json({ error: 'Files expired' });
+    }
+
+    res.json({
+      files: rows
+    });
+  } catch (error) {
+    console.error('Info error:', error);
+    res.status(500).json({ error: 'Failed to fetch files' });
   }
-
-  res.json({
-    files: group.files.map(f => ({
-      filename: f.filename,
-      originalname: f.originalname,
-      size: f.size,
-      mimetype: f.mimetype
-    }))
-  });
 });
 
 // ✅ Download endpoint for individual files
-app.get('/api/download/:code/:filename', (req, res) => {
-  const code = req.params.code.toUpperCase();
-  const filename = req.params.filename;
-  const group = fileGroups[code];
+app.get('/api/download/:code/:filename', async (req, res) => {
+  try {
+    const code = req.params.code.toUpperCase();
+    const filename = req.params.filename;
 
-  if (!group) return res.status(404).json({ error: 'Code not found' });
+    // Check if code exists and not expired
+    const [existsRows] = await db.execute(
+      'SELECT COUNT(*) as count FROM files WHERE code = ? AND filename = ? AND expiry > NOW()',
+      [code, filename]
+    );
 
-  if (Date.now() > group.expiry) {
-    delete fileGroups[code];
-    return res.status(410).json({ error: 'Files expired' });
+    if (existsRows[0].count === 0) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Get file details
+    const [rows] = await db.execute(
+      'SELECT path, originalname FROM files WHERE code = ? AND filename = ? AND expiry > NOW()',
+      [code, filename]
+    );
+
+    const file = rows[0];
+    res.download(file.path, file.originalname);
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ error: 'Download failed' });
   }
-
-  const file = group.files.find(f => f.filename === filename);
-  if (!file) return res.status(404).json({ error: 'File not found' });
-
-  res.download(file.path, file.originalname);
 });
 
-// ✅ Download endpoint for all files in a group
-app.get('/api/download/:code', (req, res) => {
-  const code = req.params.code.toUpperCase();
-  const group = fileGroups[code];
+// ✅ Download endpoint for all files in a group (metadata)
+app.get('/api/download/:code', async (req, res) => {
+  try {
+    const code = req.params.code.toUpperCase();
 
-  if (!group) return res.status(404).json({ error: 'Code not found' });
+    // Check if code exists
+    const [existsRows] = await db.execute('SELECT COUNT(*) as count FROM files WHERE code = ?', [code]);
+    if (existsRows[0].count === 0) {
+      return res.status(404).json({ error: 'Code not found' });
+    }
 
-  if (Date.now() > group.expiry) {
-    delete fileGroups[code];
-    return res.status(410).json({ error: 'Files expired' });
+    const [rows] = await db.execute(
+      'SELECT * FROM files WHERE code = ? AND expiry > NOW()',
+      [code]
+    );
+
+    if (rows.length === 0) {
+      await db.execute('DELETE FROM files WHERE code = ?', [code]);
+      return res.status(410).json({ error: 'Files expired' });
+    }
+
+    res.json({ files: rows });
+  } catch (error) {
+    console.error('Download info error:', error);
+    res.status(500).json({ error: 'Failed to fetch files' });
   }
-
-  res.json({ files: group.files });
 });
 
 // ✅ Cleanup expired files every hour
-setInterval(() => {
-  const now = Date.now();
-  for (const code in fileGroups) {
-    if (fileGroups[code].expiry < now) {
-      fileGroups[code].files.forEach(f => {
-        fs.unlink(f.path, err => {
-          if (err) console.error('Error deleting file:', err);
-        });
-      });
-      delete fileGroups[code];
+setInterval(async () => {
+  try {
+    const [result] = await db.execute('DELETE FROM files WHERE expiry < NOW()');
+    if (result.affectedRows > 0) {
+      console.log(`Cleaned up ${result.affectedRows} expired files`);
     }
+  } catch (error) {
+    console.error('Cleanup error:', error);
   }
 }, 60 * 60 * 1000);
 
