@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://swiftshare-fr7s.onrender.com';
+const API_BASE_URL = 'https://dropin-dn6i.onrender.com';
 
 console.log('Script loaded and DOMContentLoaded event listener attached');
 
@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (elements.qrCodeContainer) {
         elements.qrCodeContainer.innerHTML = '';
         new QRCode(elements.qrCodeContainer, {
-          text: 'https://swift-share-mahi.vercel.app/?code=' + currentCode,
+          text: 'https://drop-in-lmr.vercel.app/?code=' + currentCode,
           width: 128,
           height: 128,
           colorDark: '#000000',
@@ -536,7 +536,7 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.copyLinkBtn.addEventListener('click', () => {
       const code = elements.codeDisplay.textContent;
       if (!code) return;
-      const url = 'https://swift-share-mahi.vercel.app/?code=' + code;
+      const url = 'https://drop-in-lmr.vercel.app/?code=' + code;
       navigator.clipboard.writeText(url).then(() => {
         showToast('Link copied to clipboard!');
       }).catch(() => {
@@ -547,10 +547,10 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.shareBtn.addEventListener('click', () => {
       const code = elements.codeDisplay.textContent;
       if (!code) return;
-      const url = 'https://swift-share-mahi.vercel.app/?code=' + code;
+      const url = 'https://drop-in-lmr.vercel.app/?code=' + code;
       if (navigator.share) {
         navigator.share({
-          title: 'SwiftShare Files',
+          title: 'DropIn Files',
           text: 'Check out these files: ' + url,
         }).catch((error) => {
           showToast('Error sharing: ' + error, true);
@@ -563,8 +563,8 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.emailBtn.addEventListener('click', () => {
       const code = elements.codeDisplay.textContent;
       if (!code) return;
-      const url = 'https://swift-share-mahi.vercel.app/?code=' + code;
-      const subject = encodeURIComponent('SwiftShare File Transfer');
+      const url = 'https://drop-in-lmr.vercel.app/?code=' + code;
+      const subject = encodeURIComponent('DropIn File Transfer');
       const body = encodeURIComponent('Check out these files: ' + url);
       window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
     });

@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3001;
 
 // ✅ Apply CORS correctly at the top
 app.use(cors({
-  origin: '*', // Later replace with your frontend domain like 'https://Swiftshare.vercel.app'
+  origin: '*', // Later replace with your frontend domain like 'https://drop-in-lmr.vercel.app/'
 }));
 
 app.use(express.json());
@@ -126,10 +126,10 @@ setInterval(() => {
 
 // ✅ Health check route
 app.get('/', (req, res) => {
-  res.send('✅ SwiftShare backend is running');
+  res.send('✅ DropIn backend is running');
 });
 
 // ✅ Start the server
 app.listen(PORT, () => {
-  console.log(`✅ SwiftShare backend is running on port ${PORT}`);
+  console.log(`✅ DropIn backend is running on port ${PORT}`);
 });
