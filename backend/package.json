@@ -1,7 +1,7 @@
 {
-  "name": "SwiftShare-backend",
+  "name": "DropIn-backend",
   "version": "1.0.0",
-  "description": "Backend for SwiftShare app",
+  "description": "Backend for DropIn app",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
