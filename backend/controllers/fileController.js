@@ -228,9 +228,27 @@ export const downloadAllFiles = async (req, res) => {
       try {
         console.log(`Adding file to ZIP: ${file.originalname}`);
         
+        let downloadUrl = file.url;
+        
+        // For PDFs, generate fresh URL to avoid access issues
+        if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
+          try {
+            downloadUrl = cloudinary.url(file.public_id, {
+              resource_type: 'raw',
+              format: 'pdf',
+              secure: true,
+              type: 'upload'
+            });
+            console.log(`Using fresh PDF URL: ${downloadUrl}`);
+          } catch (urlError) {
+            console.error(`URL generation failed for ${file.originalname}, using original:`, urlError);
+            downloadUrl = file.url;
+          }
+        }
+        
         // Download file from Cloudinary and add to ZIP
         const fileStream = await new Promise((resolve, reject) => {
-          https.get(file.url, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (cloudRes) => {
+          https.get(downloadUrl, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (cloudRes) => {
             if (cloudRes.statusCode >= 400) {
               reject(new Error(`Failed to fetch ${file.originalname}: ${cloudRes.statusCode}`));
               return;
