@@ -27,11 +27,21 @@ export const uploadFiles = async (req, res) => {
 
     // Upload each to cloudinary with consistent public access
     for (const file of req.files) {
+      // Extract folder path from originalname if present (from webkitdirectory)
+      const folderPath = file.originalname.includes('/') ? 
+        file.originalname.substring(0, file.originalname.lastIndexOf('/')) : '';
+      const fileName = file.originalname.includes('/') ? 
+        file.originalname.substring(file.originalname.lastIndexOf('/') + 1) : 
+        file.originalname;
+
+      // Create Cloudinary folder structure
+      const cloudinaryFolder = folderPath ? `dropin/${folderPath}` : 'dropin';
+      
       const result = await cloudinary.uploader.upload(file.path, {
         resource_type: 'auto',
-        folder: 'dropin',
+        folder: cloudinaryFolder,
         use_filename: true,
-        original_filename: file.originalname,
+        original_filename: fileName,
         type: 'upload', // 🔥 THIS IS KEY - ensures public delivery
         overwrite: false,
         flags: 'attachment'
@@ -39,7 +49,7 @@ export const uploadFiles = async (req, res) => {
 
       uploadedFiles.push({
         filename: result.public_id,
-        originalname: file.originalname,
+        originalname: file.originalname, // Keep full path for display
         mimetype: file.mimetype,
         size: file.size,
         url: result.secure_url,

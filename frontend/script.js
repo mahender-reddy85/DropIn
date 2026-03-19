@@ -9,7 +9,9 @@ document.addEventListener('DOMContentLoaded', function () {
     receiveContent: document.getElementById('receiveContent'),
     dropArea: document.getElementById('dropArea'),
     browseBtn: document.querySelector('.browse-link'),
+    folderBtn: document.querySelector('.folder-link'),
     fileInput: document.getElementById('fileInput'),
+    folderInput: document.getElementById('folderInput'),
     fileList: document.getElementById('fileList'),
     clearBtn: document.getElementById('clearBtn'),
     generateCodeBtn: document.getElementById('generateCodeBtn'),
@@ -137,6 +139,18 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
+    if (elements.folderBtn) {
+      elements.folderBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        elements.folderInput.click();
+      });
+    }
+
+    elements.folderInput.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      handleFiles(files);
+    });
+
     // Make the entire drop zone clickable
     elements.dropArea.addEventListener('click', () => {
       elements.fileInput.click();
@@ -196,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function handleFiles(e) {
-    const files = Array.from(e.target.files || []);
+    const files = Array.isArray(e) ? e : Array.from(e.target.files || []);
     if (files.length > 0) {
       selectedFiles = [...selectedFiles, ...files];
       displayFiles();
@@ -223,12 +237,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const fileSize = formatFileSize(file.size);
     const fileIcon = getFileIcon(file.type);
-    const safeName = escapeHtml(file.name);
+    
+    // Extract folder path and filename
+    const filePath = file.name || file.originalname || file.webkitRelativePath || 'Unknown';
+    const folderPath = filePath.includes('/') ? filePath.substring(0, filePath.lastIndexOf('/')) : '';
+    const fileName = filePath.includes('/') ? filePath.substring(filePath.lastIndexOf('/') + 1) : filePath;
+    
+    const safeName = escapeHtml(fileName);
+    const safePath = escapeHtml(folderPath);
 
     fileItem.innerHTML = `
       <div class="file-info">
         <span class="file-icon">${fileIcon}</span>
-        <span class="file-name">${safeName}</span>
+        <div class="file-name-container">
+          ${safePath ? `<span class="folder-path">${safePath}/</span><br>` : ''}
+          <span class="file-name">${safeName}</span>
+        </div>
         <span class="file-size">${fileSize}</span>
       </div>
       <button class="remove-file" data-index="${index}" aria-label="Remove ${safeName}">
@@ -420,10 +444,6 @@ document.addEventListener('DOMContentLoaded', function () {
       const pwInput2 = document.getElementById('receivePassword');
       if (pwInput2) pwInput2.style.border = '';
 
-      if (elements.downloadStats && typeof data.downloadsCount !== 'undefined') {
-        elements.downloadStats.textContent = `(Downloads: ${data.downloadsCount})`;
-      }
-
       displayDownloadFiles(data.files, code);
       currentCode = code; // Store current code for bulk download
       showToast('Files ready for download!');
@@ -463,7 +483,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const fileSize = formatFileSize(file.size);
       const fileIcon = getFileIcon(file.mimetype);
       const safeName = escapeHtml(file.originalname);
-      const displayName = truncateFileName(file.originalname, 10);
+      const displayName = truncateFileName(file.originalname, 25);
 
       fileItem.innerHTML = `
         <div class="file-info">

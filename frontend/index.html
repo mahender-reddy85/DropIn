@@ -34,9 +34,10 @@
         <div class="upload-icon">
           <i class="fas fa-cloud-upload-alt"></i>
         </div>
-        <h3>Drop files here or <span class="browse-link">browse</span></h3>
-        <p class="max-size-text">Maximum file size: 100MB</p>
+        <h3>Drop files/folders here or <span class="browse-link">browse</span> / <span class="folder-link">select folder</span></h3>
+        <p class="max-size-text">Maximum file size: 100MB | Supports folder upload</p>
         <input type="file" id="fileInput" multiple hidden accept="image/*,video/*,audio/*,.pdf,.zip,.doc,.docx,.txt" />
+        <input type="file" id="folderInput" hidden webkitdirectory directory multiple />
       </div>
 
       <div class="file-controls">
@@ -96,8 +97,7 @@
         </div>
 
         <div id="downloadPreview" class="download-preview" style="display:none;">
-          <h4>Download Preview <span id="downloadStats"
-              style="font-size: 0.8em; font-weight: normal; margin-left: 10px; color: #666;"></span></h4>
+          <h4>Download Preview</h4>
           <div class="download-controls" style="margin-bottom: 15px;">
             <button id="downloadAllBtn" class="btn download-all-btn" style="width: 100%;">
               <i class="fas fa-download"></i> Download All Files
