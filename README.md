@@ -86,7 +86,11 @@ The backend should be deployed to a Node.js environment like Render or Railway. 
 - **DELETE** `/api/transfers/:code`
 - **Description**: Deletes the Cloudinary files and the MongoDB record instantly.
 
-### 6. Extend Expiry
+### 6. Delete Individual File
+- **DELETE** `/api/file/:id`
+- **Description**: Deletes a specific file from Cloudinary and removes it from the transfer. If no files remain, the entire transfer is deleted.
+
+### 7. Extend Expiry
 - **PUT** `/api/transfers/:code/extend`
 - **Description**: Extends existing expiry length by an additional 24 hours.
 

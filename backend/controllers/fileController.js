@@ -37,12 +37,14 @@ export const uploadFiles = async (req, res) => {
       });
 
       uploadedFiles.push({
-        filename: file.filename, // our local naming
+        filename: result.public_id,
         originalname: file.originalname,
         mimetype: file.mimetype,
         size: file.size,
         url: result.secure_url,
-        public_id: result.public_id
+        public_id: result.public_id,
+        uploadedAt: new Date(),
+        deleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
       });
     }
 
@@ -261,6 +263,60 @@ export const downloadAllFiles = async (req, res) => {
     if (!res.headersSent) {
       res.status(500).json({ error: 'Bulk download failed', details: error.message });
     }
+  }
+};
+
+export const deleteFile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find the transfer containing this file
+    const transfer = await Transfer.findOne({ 'files._id': id });
+    
+    if (!transfer) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Find the specific file
+    const file = transfer.files.id(id);
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Delete from Cloudinary
+    try {
+      await cloudinary.uploader.destroy(file.public_id, {
+        resource_type: 'auto',
+        type: 'upload'
+      });
+    } catch (cloudinaryError) {
+      console.error('Cloudinary deletion error:', cloudinaryError);
+      // Continue with database deletion even if Cloudinary fails
+    }
+    
+    // Remove file from transfer
+    transfer.files.pull(id);
+    
+    // If no files left, delete the entire transfer
+    if (transfer.files.length === 0) {
+      await Transfer.deleteOne({ _id: transfer._id });
+      return res.json({ 
+        success: true, 
+        message: 'File deleted and transfer removed (no files remaining)' 
+      });
+    }
+    
+    await transfer.save();
+    
+    res.json({ 
+      success: true, 
+      message: 'File deleted successfully',
+      remainingFiles: transfer.files.length 
+    });
+    
+  } catch (error) {
+    console.error('Delete file error:', error);
+    res.status(500).json({ error: 'Failed to delete file', details: error.message });
   }
 };
 

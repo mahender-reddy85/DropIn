@@ -77,4 +77,31 @@ describe('API Tests', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('application/zip');
   });
+
+  test('8. Delete file for non-existent ID returns 404', async () => {
+    jest.spyOn(Transfer, 'findOne').mockResolvedValueOnce(null);
+    const res = await request(app).delete('/api/file/invalid123');
+    expect(res.status).toBe(404);
+  });
+
+  test('9. Delete file for valid ID works', async () => {
+    const mockTransfer = {
+      files: [{
+        _id: 'file123',
+        filename: 'test.pdf',
+        originalname: 'test.pdf',
+        public_id: 'test_pdf'
+      }],
+      save: jest.fn(),
+      pull: jest.fn()
+    };
+    
+    jest.spyOn(Transfer, 'findOne').mockResolvedValueOnce(mockTransfer);
+    jest.spyOn(mockTransfer.files, 'id').mockReturnValueOnce(mockTransfer.files[0]);
+    jest.spyOn(cloudinary.uploader, 'destroy').mockResolvedValueOnce({ result: 'ok' });
+    
+    const res = await request(app).delete('/api/file/file123');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
 });
