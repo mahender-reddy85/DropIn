@@ -354,9 +354,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error('Code not found');
+          throw new Error('Code not found or expired');
         } else if (response.status === 410) {
           throw new Error('Files expired');
+        } else if (response.status === 401) {
+          // Password required or wrong — highlight the password field
+          const pwContainer = document.getElementById('receivePasswordContainer');
+          const pwInput = document.getElementById('receivePassword');
+          if (pwContainer) pwContainer.style.display = 'block';
+          if (pwInput) {
+            pwInput.style.border = '2px solid var(--error-color)';
+            pwInput.placeholder = 'Enter password to unlock this transfer';
+            pwInput.focus();
+          }
+          const errData = await response.json().catch(() => ({}));
+          const msg = errData.error === 'Incorrect password'
+            ? '❌ Wrong password — try again'
+            : '🔒 This transfer is password protected — enter the password above';
+          showToast(msg, true);
+          return; // Don't throw, just stop here
         } else {
           throw new Error('Failed to fetch files');
         }
@@ -364,6 +380,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const data = await response.json();
       
+      // Reset password field styling on success
+      const pwInput2 = document.getElementById('receivePassword');
+      if (pwInput2) pwInput2.style.border = '';
+
       if (elements.downloadStats && typeof data.downloadsCount !== 'undefined') {
         elements.downloadStats.textContent = `(Downloads: ${data.downloadsCount})`;
       }
