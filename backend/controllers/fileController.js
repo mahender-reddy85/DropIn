@@ -3,6 +3,7 @@ import cloudinary from '../config/cloudinary.js';
 import { nanoid } from 'nanoid';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
+import https from 'https';
 
 // Clean up temporary local files after uploading or on error
 const cleanupLocalFiles = (files) => {
@@ -139,10 +140,18 @@ export const downloadFile = async (req, res) => {
     transfer.downloadsCount += 1;
     await transfer.save();
     
-    // Redirect directly to Cloudinary URL - no transformation needed
-    // The browser will handle the download natively
-    res.redirect(file.url);
-
+    // Proxy the download from Cloudinary to the user to bypass all CORS and resource-type restrictions
+    https.get(file.url, (cloudinaryRes) => {
+      // Set headers to trigger a download window with the original filename
+      res.setHeader('Content-Type', file.mimetype || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalname)}"`);
+      
+      // Pipe the data directly from Cloudinary to the user's browser
+      cloudinaryRes.pipe(res);
+    }).on('error', (err) => {
+      console.error('Proxy Download Error:', err);
+      res.status(500).json({ error: 'Failed to proxy file download' });
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to download file' });
   }

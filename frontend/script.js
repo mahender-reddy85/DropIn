@@ -136,10 +136,16 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.dropArea.addEventListener('drop', handleDrop);
 
     if (elements.browseBtn) {
-      elements.browseBtn.addEventListener('click', () => {
+      elements.browseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         elements.fileInput.click();
       });
     }
+
+    // Make the entire drop zone clickable
+    elements.dropArea.addEventListener('click', () => {
+      elements.fileInput.click();
+    });
 
     // Global drag and drop overlay logic
     if (elements.dragDropOverlay) {
@@ -467,11 +473,22 @@ document.addEventListener('DOMContentLoaded', function () {
       `;
 
       const downloadBtn = fileItem.querySelector('.download-btn');
-      downloadBtn.addEventListener('click', () => downloadFile(file.url, file.originalname));
+      downloadBtn.addEventListener('click', () => downloadFile(code, file.filename, file.originalname));
 
       // Hover preview
       const trigger = fileItem.querySelector('.preview-trigger');
       trigger.addEventListener('mouseenter', (e) => {
+        if (window.innerWidth > 768) {
+          showPreview(e);
+        }
+      });
+
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showPreview(e);
+      });
+
+      function showPreview(e) {
         if (isImage(file.mimetype)) {
           previewEl.innerHTML = `<img src="${file.url}" alt="${safeName}" />`;
         } else if (isVideo(file.mimetype)) {
@@ -485,12 +502,25 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>`;
         }
         previewEl.classList.add('visible');
-        positionPreview(e, previewEl);
+        if (window.innerWidth > 768) {
+          positionPreview(e, previewEl);
+        }
+      }
+
+      trigger.addEventListener('mousemove', (e) => {
+        if (window.innerWidth > 768) {
+          positionPreview(e, previewEl);
+        }
       });
 
-      trigger.addEventListener('mousemove', (e) => positionPreview(e, previewEl));
-
       trigger.addEventListener('mouseleave', () => {
+        if (window.innerWidth > 768) {
+          previewEl.classList.remove('visible');
+        }
+      });
+
+      // Close preview on clicking outside
+      document.addEventListener('click', () => {
         previewEl.classList.remove('visible');
       });
 
@@ -520,26 +550,18 @@ document.addEventListener('DOMContentLoaded', function () {
     el.style.top = y + 'px';
   }
 
-  async function downloadFile(url, originalname) {
+  async function downloadFile(code, filename, originalname) {
     showToast('Starting download...');
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Download failed');
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = originalname;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
-      showToast('Download complete!');
-    } catch (err) {
-      // Fallback: open in new tab if fetch fails (e.g. CORS)
-      window.open(url, '_blank');
-      showToast('Opened in new tab — save manually if needed.');
-    }
+    const url = `${API_BASE_URL}/api/download/${code}/${filename}`;
+    
+    // Using a direct link for proxied same-origin downloads is most reliable
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = originalname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('Download complete!');
   }
 
   function openQrScanner() {

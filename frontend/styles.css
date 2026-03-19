@@ -115,13 +115,14 @@ h1 i {
 }
 
 .upload-zone {
-  border: 2px dashed var(--border-color);
-  border-radius: 0.5rem;
+  border: 2px dashed #cbd5e1;
+  border-radius: 1rem;
   padding: 3rem 2rem;
   text-align: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  background: var(--surface-color);
+  transition: all 0.2s ease;
   margin-bottom: 2rem;
+  cursor: pointer;
 }
 
 .upload-zone:hover,
@@ -621,6 +622,28 @@ a.download-btn:active {
 [data-theme="dark"] .file-preview-tooltip {
   background: #1a1a1a;
   border-color: #333;
+}
+
+@media (max-width: 768px) {
+  .file-preview-tooltip {
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) scale(0.95);
+    width: 90vw;
+    max-width: 320px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    background: var(--surface-color);
+  }
+  
+  .file-preview-tooltip.visible {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+
+  /* Prevent tooltip interaction issues on mobile touch */
+  .preview-trigger {
+    text-decoration-style: solid;
+  }
 }
 
 /* Global Drag & Drop Overlay */
