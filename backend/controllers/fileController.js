@@ -147,7 +147,42 @@ export const downloadFile = async (req, res) => {
     // Direct request to Cloudinary URL (publicly accessible)
     https.get(file.url, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (cloudRes) => {
       if (cloudRes.statusCode >= 400) {
-        console.error(`Auth Proxy Fail: ${cloudRes.statusCode} for ${file.url}`);
+        console.error(`Direct access failed: ${cloudRes.statusCode} for ${file.url}`);
+        
+        // Fallback: Generate signed URL for PDFs and documents
+        if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
+          try {
+            const signedUrl = cloudinary.url(file.public_id, {
+              resource_type: 'raw',
+              sign_url: true,
+              expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiry
+            });
+            
+            console.log(`Retrying with signed URL: ${signedUrl}`);
+            https.get(signedUrl, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (signedRes) => {
+              if (signedRes.statusCode >= 400) {
+                return res.status(signedRes.statusCode).json({ error: `Signed URL Failed: ${signedRes.statusCode}` });
+              }
+              
+              const isMedia = file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'));
+              const forcedMime = isMedia ? file.mimetype : 'application/octet-stream';
+
+              res.setHeader('Content-Type', forcedMime);
+              res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalname)}"`);
+              res.setHeader('Content-Length', signedRes.headers['content-length'] || file.size);
+              res.setHeader('Cache-Control', 'no-cache');
+              
+              signedRes.pipe(res);
+            }).on('error', (err) => {
+              console.error('SIGNED URL ERROR:', err);
+              res.status(500).json({ error: 'Signed URL download failed' });
+            });
+            return;
+          } catch (signError) {
+            console.error('Signed URL generation failed:', signError);
+          }
+        }
+        
         return res.status(cloudRes.statusCode).json({ error: `Cloud Proxy Failed: ${cloudRes.statusCode}` });
       }
 
