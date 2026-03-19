@@ -51,8 +51,6 @@ export const uploadFiles = async (req, res) => {
         uploadedFiles.push({
           filename: result.public_id,
           originalname: file.originalname,
-          displayName: file.originalname, // Keep original display name
-          relativePath: file.originalname, // Will contain folder structure for folder uploads
           mimetype: file.mimetype,
           size: file.size,
           url: result.secure_url,
@@ -131,7 +129,6 @@ export const getFilesInfo = async (req, res) => {
       files: transfer.files.map(f => ({
         filename: f.filename,
         originalname: f.originalname,
-        relativePath: f.relativePath || f.originalname,
         size: f.size,
         mimetype: f.mimetype,
         url: f.url
@@ -258,7 +255,7 @@ export const downloadAllFiles = async (req, res) => {
           timeout: 30000 // 30 second timeout
         });
 
-        archive.append(response.data, { name: file.relativePath || file.originalname });
+        archive.append(response.data, { name: file.originalname });
         processedFiles++;
 
       } catch (err) {

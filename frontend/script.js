@@ -9,9 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
     receiveContent: document.getElementById('receiveContent'),
     dropArea: document.getElementById('dropArea'),
     browseBtn: document.querySelector('.browse-link'),
-    folderBtn: document.querySelector('.folder-link'),
     fileInput: document.getElementById('fileInput'),
-    folderInput: document.getElementById('folderInput'),
     fileList: document.getElementById('fileList'),
     clearBtn: document.getElementById('clearBtn'),
     generateCodeBtn: document.getElementById('generateCodeBtn'),
@@ -138,18 +136,6 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
-    if (elements.folderBtn) {
-      elements.folderBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        elements.folderInput.click();
-      });
-    }
-
-    elements.folderInput.addEventListener('change', (e) => {
-      const files = Array.from(e.target.files);
-      handleFiles(files);
-    });
-
     // Make the entire drop zone clickable
     elements.dropArea.addEventListener('click', () => {
       elements.fileInput.click();
@@ -237,19 +223,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const fileSize = formatFileSize(file.size);
     const fileIcon = getFileIcon(file.type);
     
-    // Extract folder path and filename - use relativePath if available (from folder upload)
-    const filePath = file.relativePath || file.name || file.originalname || file.webkitRelativePath || 'Unknown';
-    const folderPath = filePath.includes('/') ? filePath.substring(0, filePath.lastIndexOf('/')) : '';
-    const fileName = filePath.includes('/') ? filePath.substring(filePath.lastIndexOf('/') + 1) : filePath;
-    
+    const fileName = file.name || file.originalname || 'Unknown';
     const safeName = escapeHtml(fileName);
-    const safePath = escapeHtml(folderPath);
 
     fileItem.innerHTML = `
       <div class="file-info">
         <span class="file-icon">${fileIcon}</span>
         <div class="file-name-container">
-          ${safePath ? `<span class="folder-path">${safePath}/</span><br>` : ''}
           <span class="file-name">${safeName}</span>
         </div>
         <span class="file-size">${fileSize}</span>
@@ -321,10 +301,7 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
-        body: formData,
-        mode: 'cors',
-        cache: 'no-cache',
-        credentials: 'same-origin'
+        body: formData
       });
 
       if (!response.ok) {
@@ -484,23 +461,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const fileSize = formatFileSize(file.size);
       const fileIcon = getFileIcon(file.mimetype);
-      
-      // Use relativePath for folder structure if available
-      const filePath = file.relativePath || file.originalname;
-      const folderPath = filePath.includes('/') ? filePath.substring(0, filePath.lastIndexOf('/')) : '';
-      const fileName = filePath.includes('/') ? filePath.substring(filePath.lastIndexOf('/') + 1) : filePath;
-      
-      const safeName = escapeHtml(fileName);
-      const safePath = escapeHtml(folderPath);
-      const displayName = truncateFileName(fileName, 25);
+      const safeName = escapeHtml(file.originalname);
+      const displayName = truncateFileName(file.originalname, 25);
 
       fileItem.innerHTML = `
         <div class="file-info">
           <span class="file-icon">${fileIcon}</span>
-          <div class="file-name-container">
-            ${safePath ? `<span class="folder-path">${safePath}/</span><br>` : ''}
-            <span class="file-name preview-trigger" title="${filePath}">${displayName}</span>
-          </div>
+          <span class="file-name preview-trigger" title="${safeName}">${displayName}</span>
           <span class="file-size">${fileSize}</span>
         </div>
       `;

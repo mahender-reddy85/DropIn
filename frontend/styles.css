@@ -156,12 +156,6 @@ h1 i {
   text-decoration: underline;
 }
 
-.folder-link {
-  color: var(--secondary-color);
-  cursor: pointer;
-  text-decoration: underline;
-}
-
 .max-size-text {
   color: var(--text-secondary);
   font-size: 0.875rem;
@@ -289,14 +283,6 @@ h1 i {
 
 .file-name {
   font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.folder-path {
-  font-size: 0.8rem;
-  color: var(--primary-color);
-  font-weight: 400;
-  font-style: italic;
   margin-bottom: 0.25rem;
 }
 
@@ -630,13 +616,6 @@ h1 i {
     font-size: 0.9rem;
     flex: 1;
     font-weight: 500;
-  }
-
-  .folder-path {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    font-weight: 400;
-    font-style: italic;
   }
 
   .file-size {

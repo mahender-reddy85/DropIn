@@ -14,23 +14,8 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Security Middlewares
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
-app.use(cors({ 
-  origin: ['https://dropin-dn6i.onrender.com', 'http://localhost:3000', 'http://127.0.0.1:3000'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-// Handle preflight requests
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
-  res.send(200);
-});
+app.use(helmet());
+app.use(cors({ origin: '*' }));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -40,23 +25,14 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Data sanitization against NoSQL query injection
 app.use(mongoSanitize());
 
 // Data sanitization against XSS
 app.use(xssParse());
-
-// Debug middleware for CORS issues
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
-  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin}`);
-  next();
-});
 
 // Logging
 app.use(morgan('dev'));
@@ -66,14 +42,6 @@ app.use('/api', fileRoutes);
 
 app.get('/', (req, res) => {
   res.send('✅ DropIn API is running securely');
-});
-
-app.options('/api/upload', (req, res) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
-  res.header('Access-Control-Max-Age', '86400'); // 24 hours
-  res.sendStatus(200);
 });
 
 // Global error handler
