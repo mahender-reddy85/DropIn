@@ -622,3 +622,86 @@ a.download-btn:active {
   background: #1a1a1a;
   border-color: #333;
 }
+
+/* Global Drag & Drop Overlay */
+.drag-drop-global-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(59, 130, 246, 0.9);
+  display: flex;
+  visibility: hidden;
+  opacity: 0;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(8px);
+  color: white;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.drag-drop-global-overlay.active {
+  visibility: visible;
+  opacity: 1;
+}
+
+.overlay-content {
+  text-align: center;
+  pointer-events: none;
+}
+
+.overlay-content i {
+  font-size: 5rem;
+  margin-bottom: 1.5rem;
+}
+
+.pulse {
+  animation: pulse-animation 2s infinite;
+}
+
+@keyframes pulse-animation {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Enhanced X Button (Remove File) */
+.remove-file {
+  background: rgba(255, 77, 79, 0.1);
+  border: 1px solid rgba(255, 77, 79, 0.2);
+  color: #ff4d4f;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.remove-file:hover {
+  background: #ff4d4f;
+  color: white;
+  transform: rotate(90deg) scale(1.1);
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  margin-bottom: 0.5rem;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.file-item:hover {
+  border-color: var(--primary-color);
+  transform: translateX(4px);
+}

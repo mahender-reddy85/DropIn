@@ -35,7 +35,8 @@ document.addEventListener('DOMContentLoaded', function () {
     downloadFileList: document.getElementById('downloadFileList'),
     extendBtn: document.getElementById('extendBtn'),
     deleteBtn: document.getElementById('deleteBtn'),
-    downloadStats: document.getElementById('downloadStats')
+    downloadStats: document.getElementById('downloadStats'),
+    dragDropOverlay: document.getElementById('dragDropOverlay')
   };
 
   // State management
@@ -138,6 +139,37 @@ document.addEventListener('DOMContentLoaded', function () {
       elements.browseBtn.addEventListener('click', () => {
         elements.fileInput.click();
       });
+    }
+
+    // Global drag and drop overlay logic
+    if (elements.dragDropOverlay) {
+      ['dragenter', 'dragover'].forEach(eventName => {
+        window.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          // Ensure we only show if it contains files
+          if (e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+            elements.dragDropOverlay.classList.add('active');
+          }
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        window.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          // Only remove if we're actually leaving the window or dropping
+          if (e.type === 'drop' || (e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight)) {
+            elements.dragDropOverlay.classList.remove('active');
+          }
+        }, false);
+      });
+
+      window.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles({ target: { files } }); // Pass as an event-like object
+      }, false);
     }
 
     elements.fileInput.addEventListener('change', handleFiles);
