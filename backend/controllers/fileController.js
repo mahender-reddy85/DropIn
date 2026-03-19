@@ -32,8 +32,9 @@ export const uploadFiles = async (req, res) => {
         folder: 'dropin',
         use_filename: true,
         original_filename: file.originalname,
-        access_mode: 'public',
-        overwrite: false
+        type: 'upload', // 🔥 THIS IS KEY - ensures public delivery
+        overwrite: false,
+        flags: 'attachment'
       });
 
       uploadedFiles.push({
