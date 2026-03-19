@@ -215,7 +215,7 @@ export const downloadAllFiles = async (req, res) => {
     });
 
     // Set response headers for ZIP download
-    const zipFilename = `${transfer.code}_files.zip`;
+    const zipFilename = `dropin_${transfer.downloadsCount}.zip`;
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(zipFilename)}"`);
     res.setHeader('Cache-Control', 'no-cache');
