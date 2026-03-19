@@ -2,15 +2,16 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import app from './app.js';
-import connectDB from './config/db.js';
+import mongoose from "mongoose";
 
 const PORT = process.env.PORT || 3001;
 
-// Connect to Database, then start server
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`✅ DropIn backend is running on port ${PORT}`);
-  });
-}).catch(err => {
-  console.error('Failed to connect to database', err);
+// Start server
+app.listen(PORT, () => {
+  console.log(`✅ DropIn backend is running on port ${PORT}`);
 });
+
+// Use exact pattern for DB requested
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.log(err));
