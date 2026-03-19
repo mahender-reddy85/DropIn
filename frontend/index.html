@@ -34,17 +34,25 @@
         </div>
         <h3>Drop files here or <span class="browse-link">browse</span></h3>
         <p class="max-size-text">Maximum file size: 100MB</p>
+        <p class="trust-signals" style="font-size: 0.85rem; color: #666; margin-top: 8px;">
+          <i class="fas fa-shield-alt"></i> Secure temporary file sharing &bull; <i class="fas fa-clock"></i> Auto-deletes based on settings
+        </p>
         <input type="file" id="fileInput" multiple hidden accept="image/*,video/*,audio/*,.pdf,.zip,.doc,.docx,.txt" />
       </div>
 
       <div class="file-controls">
-        <button id="clearBtn" class="btn clear-btn">
-          <i class="fas fa-trash"></i> Clear All
-        </button>
-        <!-- Upload Files button removed as requested -->
-        <button id="generateCodeBtn" class="btn generate-btn" disabled>
-          <i class="fas fa-key"></i> Generate Code
-        </button>
+        <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+          <label style="color: #666; font-size: 0.9em;"><i class="fas fa-lock"></i> Optional Password:</label>
+          <input type="password" id="uploadPassword" placeholder="Protect with password..." style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; flex-grow: 1;">
+        </div>
+        <div style="display: flex; gap: 10px; width: 100%;">
+          <button id="clearBtn" class="btn clear-btn" style="flex:1;">
+            <i class="fas fa-trash"></i> Clear All
+          </button>
+          <button id="generateCodeBtn" class="btn generate-btn" style="flex:2;" disabled>
+            <i class="fas fa-key"></i> Generate Code
+          </button>
+        </div>
       </div>
 
       <div class="file-list-container">
@@ -67,8 +75,13 @@
     <div class="tab-content" id="receiveContent" style="display:none;">
       <div class="receive-section">
         <div class="receive-input">
-          <label for="receiveInput">Enter 5-digit code or paste link</label>
-          <input type="text" id="receiveInput" placeholder="e.g., 1234 or paste link" maxlength="100" />
+          <label for="receiveInput">Enter transfer code or paste link</label>
+          <input type="text" id="receiveInput" placeholder="e.g., A1B2C3D4 or paste link" maxlength="100" />
+        </div>
+        
+        <div class="receive-input" style="margin-top:10px;" id="receivePasswordContainer">
+          <label for="receivePassword"><i class="fas fa-lock"></i> Password (if protected)</label>
+          <input type="password" id="receivePassword" placeholder="Enter password to unlock" />
         </div>
 
         <div class="receive-controls">
@@ -88,7 +101,7 @@
         </div>
 
         <div id="downloadPreview" class="download-preview" style="display:none;">
-          <h4>Download Preview</h4>
+          <h4>Download Preview <span id="downloadStats" style="font-size: 0.8em; font-weight: normal; margin-left: 10px; color: #666;"></span></h4>
           <div id="downloadFileList" class="download-file-list"></div>
           <div class="download-progress">
             <div class="progress-bar">
@@ -104,7 +117,7 @@
     <div id="codeModal" class="modal" style="display:none;">
       <div class="modal-content">
         <span id="closeCodeModal" class="close">&times;</span>
-        <h3>Your 5-digit code</h3>
+        <h3>Your Transfer Code</h3>
       <div class="code-qr-wrapper">
         <div id="codeDisplay" class="code-display"></div>
         <div id="qrCodeContainer" class="qr-code-container"></div>
@@ -120,6 +133,14 @@
         <button id="emailBtn" class="btn email-btn">
           <i class="fas fa-envelope"></i> Email
         </button>
+      </div>
+      
+      <div class="modal-management" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+        <h4>Manage Transfer</h4>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <button id="extendBtn" class="btn" style="flex: 1; background: #f0f0f0; color: #333;"><i class="fas fa-clock"></i> Extend Expiry</button>
+          <button id="deleteBtn" class="btn" style="flex: 1; background: #ff4d4f; color: white;"><i class="fas fa-trash"></i> Delete</button>
+        </div>
       </div>
       </div>
     </div>

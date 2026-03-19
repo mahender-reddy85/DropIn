@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://dropin-dn6i.onrender.com';
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:3001' : 'https://dropin-dn6i.onrender.com';
 
 console.log('Script loaded and DOMContentLoaded event listener attached');
 
@@ -32,7 +32,10 @@ document.addEventListener('DOMContentLoaded', function () {
     emailBtn: document.getElementById('emailBtn'),
     themeToggleBtn: document.getElementById('themeToggle'),
     downloadPreview: document.getElementById('downloadPreview'),
-    downloadFileList: document.getElementById('downloadFileList')
+    downloadFileList: document.getElementById('downloadFileList'),
+    extendBtn: document.getElementById('extendBtn'),
+    deleteBtn: document.getElementById('deleteBtn'),
+    downloadStats: document.getElementById('downloadStats')
   };
 
   // State management
@@ -253,6 +256,11 @@ document.addEventListener('DOMContentLoaded', function () {
     selectedFiles.forEach(file => {
       formData.append('files', file);
     });
+    
+    const pwInput = document.getElementById('uploadPassword');
+    if (pwInput && pwInput.value.trim().length > 0) {
+      formData.append('password', pwInput.value.trim());
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/upload`, {
@@ -274,8 +282,9 @@ document.addEventListener('DOMContentLoaded', function () {
       // Generate and display QR code
       if (elements.qrCodeContainer) {
         elements.qrCodeContainer.innerHTML = '';
+        const fileUrl = window.location.origin + '/file/' + currentCode;
         new QRCode(elements.qrCodeContainer, {
-          text: 'https://drop-in-lmr.vercel.app/?code=' + currentCode,
+          text: fileUrl,
           width: 128,
           height: 128,
           colorDark: '#000000',
@@ -329,7 +338,16 @@ document.addEventListener('DOMContentLoaded', function () {
     showToast('Fetching files...');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/info/${code}`);
+      const pwInput = document.getElementById('receivePassword');
+      const reqBody = (pwInput && pwInput.value.trim()) ? { password: pwInput.value.trim() } : {};
+      
+      const response = await fetch(`${API_BASE_URL}/api/info/${code}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(reqBody)
+      });
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -342,6 +360,11 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       const data = await response.json();
+      
+      if (elements.downloadStats && typeof data.downloadsCount !== 'undefined') {
+        elements.downloadStats.textContent = `(Downloads: ${data.downloadsCount})`;
+      }
+
       displayDownloadFiles(data.files, code);
       showToast('Files ready for download!');
     } catch (error) {
@@ -536,7 +559,7 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.copyLinkBtn.addEventListener('click', () => {
       const code = elements.codeDisplay.textContent;
       if (!code) return;
-      const url = 'https://drop-in-lmr.vercel.app/?code=' + code;
+      const url = window.location.origin + '/file/' + code;
       navigator.clipboard.writeText(url).then(() => {
         showToast('Link copied to clipboard!');
       }).catch(() => {
@@ -547,7 +570,7 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.shareBtn.addEventListener('click', () => {
       const code = elements.codeDisplay.textContent;
       if (!code) return;
-      const url = 'https://drop-in-lmr.vercel.app/?code=' + code;
+      const url = window.location.origin + '/file/' + code;
       if (navigator.share) {
         navigator.share({
           title: 'DropIn Files',
@@ -563,17 +586,59 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.emailBtn.addEventListener('click', () => {
       const code = elements.codeDisplay.textContent;
       if (!code) return;
-      const url = 'https://drop-in-lmr.vercel.app/?code=' + code;
+      const url = window.location.origin + '/file/' + code;
       const subject = encodeURIComponent('DropIn File Transfer');
       const body = encodeURIComponent('Check out these files: ' + url);
       window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
     });
+
+    if (elements.extendBtn) {
+      elements.extendBtn.addEventListener('click', async () => {
+        const code = elements.codeDisplay.textContent;
+        if (!code) return;
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/transfers/${code}/extend`, { method: 'PUT' });
+          if (response.ok) {
+            showToast('Expiry extended by 24 hours!');
+          } else {
+            showToast('Failed to extend expiry.', true);
+          }
+        } catch (error) {
+          showToast('Error extending expiry.', true);
+        }
+      });
+    }
+
+    if (elements.deleteBtn) {
+      elements.deleteBtn.addEventListener('click', async () => {
+        const code = elements.codeDisplay.textContent;
+        if (!code) return;
+        if (!confirm('Are you sure you want to permanently delete this transfer?')) return;
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/transfers/${code}`, { method: 'DELETE' });
+          if (response.ok) {
+            showToast('Transfer deleted!');
+            closeCodeModal();
+          } else {
+            showToast('Failed to delete transfer.', true);
+          }
+        } catch (error) {
+          showToast('Error deleting transfer.', true);
+        }
+      });
+    }
   }
 
   // Handle URL parameters for auto-fill and fetch
   function handleUrlParams() {
     const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
+    let code = urlParams.get('code');
+    
+    // Also check for /file/:id routing
+    if (window.location.pathname.startsWith('/file/')) {
+      code = window.location.pathname.split('/file/')[1];
+    }
+
     if (code) {
       elements.receiveInput.value = code.toUpperCase();
       switchTab('receive');

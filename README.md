@@ -1,148 +1,112 @@
-# DropIn
+# DropIn - Modern Secure File Transfer
 
-A modern, secure file transfer application that allows users to upload files and share them via unique codes or QR codes. Built with a Node.js backend and a responsive HTML/CSS/JavaScript frontend.
+A robust, secure file transfer application built with a separate Node.js backend (Express + MongoDB) and an HTML/JS/CSS frontend. It allows users to upload files and share them via secure nano-ID codes or QR codes.
 
-## Features
+## Features & Technical Upgrades
 
-- **File Upload**: Support for multiple file types with drag-and-drop interface
-- **Secure Sharing**: Generate unique 5-digit codes for file access
-- **QR Code Integration**: Scan QR codes to quickly access shared files
-- **Expiration**: Files automatically expire after 1 hour for security
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
-- **Dark Mode**: Toggle between light and dark themes
-- **Progress Tracking**: Real-time upload and download progress
+- **Real Persistence**: Uses MongoDB Atlas with TTL indices for automatic expiry.
+- **Robust Storage**: Integrates with Cloudinary for fast and reliable cloud file storage.
+- **Improved Security**: Rate limiting, MongoDB sanitization, XSS cleanup, and Helmet protection.
+- **Cryptographically Secure IDs**: Utilizes `nanoid` (12 characters minimum) for brute-force resistance.
+- **File Management**: Users can delete their transfers manually or extend the expiry time.
+- **Download Limits**: Prevents abuse by limiting maximum downloads.
 
-## Tech Stack
+---
 
-### Frontend
-- HTML5
-- CSS3 (with CSS Variables for theming)
-- JavaScript (ES6+)
-- QRCode.js for QR code generation
-- Html5-QRCode for QR code scanning
+## Architecture Diagram
 
-### Backend
-- Node.js
-- Express.js
-- Multer for file handling
-- UUID for unique code generation
-- CORS for cross-origin requests
-
-## Project Structure
-
-```
-SwiftShare/
-├── backend/
-│   ├── index.js          # Main server file
-│   ├── package.json      # Backend dependencies         # File metadata storage
-│   └── README.md         # Backend-specific documentation
-├── frontend/
-│   ├── index.html        # Main HTML file
-│   ├── script.js         # Frontend JavaScript
-│   ├── styles.css        # CSS styles
-│   └── vercel.json       # Vercel deployment config
-├── package.json          # Root package.json (if needed)
-└── README.md             # This file
+```mermaid
+graph TD;
+    Client[Frontend Client HTML/JS] -->|HTTPS Requests| API[Express Backend API];
+    API -->|Validation & Rate Limiting| Controller[File Controller];
+    Controller -->|Save Metadata & TTL| DB[(MongoDB Atlas)];
+    Controller -->|Upload Stream| Storage[(Cloudinary)];
+    Storage -->|File URL| Controller;
+    Controller -->|Return Code| API;
+    API -->|JSON/Download Link| Client;
 ```
 
-## Setup Instructions
+---
 
-### Prerequisites
-- Node.js (v14 or higher)
-- npm or yarn
+## Comprehensive Security Notes
 
-### Backend Setup
+1. **Anti-Brute Force**: Transfer codes are 12-character high-entropy strings generated using `nanoid`.
+2. **Rate Limiting**: IP-based rate limiting via `express-rate-limit` (max 50 requests per minute).
+3. **Data Sanitization**: All inputs are sanitized using `express-mongo-sanitize` to prevent NoSQL injection, and `xss-clean` for cross-site scripting prevention.
+4. **Automated Expiry**: A MongoDB TTL index automatically wipes the document upon hitting `expiresAt`, ensuring zero stale data.
+5. **Secure Headers**: `helmet` manages HTTP headers, blocking common vulnerabilities.
+6. **Robust Validation**: Files are strictly verified against mimetypes and size constraints before saving.
 
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
+---
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+## Deployment Strategy
 
-3. Ensure the `uploads` and `metadata` directories exist (they should be created automatically by the server).
+### Frontend Deployment (Vercel)
+The frontend is a static SPA. It can be easily deployed to Vercel.
+Ensure your `vercel.json` includes SPA rewrites:
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+}
+```
 
-4. Start the development server:
-   ```bash
-   npm start
-   ```
+### Backend Deployment (Render / Railway)
+The backend should be deployed to a Node.js environment like Render or Railway. Make sure to define these environment variables in your production environment:
 
-The backend will run on `http://localhost:3001` by default.
+- `PORT` (e.g., 3001)
+- `MONGO_URI` (MongoDB Atlas Connection String)
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
 
-### Frontend Setup
+**Render Note**: Ensure you set the Node version natively using the `engines` property or Render's configuration. Run `npm install` and the start command is `npm start`.
 
-The frontend is a static site that can be served from any web server or deployed to platforms like Vercel.
+---
 
-1. For local development, you can use a simple HTTP server:
-   ```bash
-   cd frontend
-   python -m http.server 8000
-   # or
-   npx serve .
-   ```
+## API Documentation
 
-2. Open `http://localhost:8000` in your browser.
-
-For production deployment, the frontend can be deployed to Vercel, Netlify, or any static hosting service.
-
-## Usage
-
-1. **Sending Files**:
-   - Drag and drop files into the upload zone or click to browse
-   - Click "Generate Code" to upload files and get a shareable code
-   - Share the code or QR code with recipients
-
-2. **Receiving Files**:
-   - Enter the 5-digit code in the "Receive" tab
-   - Or scan the QR code using the "Scan QR Code" button
-   - Download individual files or view all files in the group
-
-## API Endpoints
-
-### Upload Files
+### 1. Upload Files
 - **POST** `/api/upload`
-- Accepts multipart/form-data with `files` field
-- Returns a JSON object with `code` property
+- **Body**: `multipart/form-data` with multiple `files` (Max 100MB per file).
+- **Description**: Uploads files to Cloudinary, creates a MongoDB entry, and returns a secure transfer code.
 
-### Get File Info
+### 2. Get Transfer Info
 - **GET** `/api/info/:code`
-- Returns file metadata for the given code
+- **Description**: Retrieves file metadata for downloading, including file properties and expiry info.
 
-### Download File
+### 3. Download File
 - **GET** `/api/download/:code/:filename`
-- Downloads a specific file
+- **Description**: Verifies transfer limit. Increments the download counter and redirects to the secure Cloudinary attachment URL.
 
-### Download All Files
-- **GET** `/api/download/:code`
-- Returns metadata for all files in the group
+### 4. Delete Transfer
+- **DELETE** `/api/transfers/:code`
+- **Description**: Deletes the Cloudinary files and the MongoDB record instantly.
 
-## Configuration
+### 5. Extend Expiry
+- **PUT** `/api/transfers/:code/extend`
+- **Description**: Extends existing expiry length by an additional 24 hours.
 
-### Environment Variables
-Create a `.env` file in the backend directory with:
+---
+
+## Scaling Discussion
+
+As the application payload grows, consider the following scaling strategies:
+1. **Direct-to-Cloud Uploads**: Bypassing the backend by generating Cloudinary signed URLs. The client directly uploads to Cloudinary, reducing backend load drastically.
+2. **CDN Delivery**: While Cloudinary acts natively as CDN, placing Cloudflare in front of the application can handle massive traffic spikes.
+3. **Database Sharding**: Over long periods, though TTL automatically cleans documents, a high read/write volume metadata database (MongoDB) should utilize connection pooling properly or enable sharding.
+4. **Microservices (Optional)**: Move upload processing to an async worker service utilizing a queue (e.g., bullmq / Redis) if heavy file compression or transformations are needed offline.
+
+---
+
+## Local Setup
+
+1. Clone repo and create an `.env` in `backend` based on `.env.example`.
+2. Backend: `cd backend` -> `npm install` -> `npm run dev`.
+3. Frontend: Host via local tools like `npx serve .` inside `frontend`.
+
+## Testing
+Run Jest API tests in the backend using:
+```bash
+cd backend
+npm test
 ```
-PORT=3001
-```
-
-### File Size Limits
-- Maximum file size: 100MB (configurable in frontend)
-- Files expire after 1 hour
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-This project is licensed under the ISC License.
-
-## Support
-
-For issues or questions, please open an issue on GitHub.
