@@ -28,6 +28,16 @@ export const uploadFiles = async (req, res) => {
       size: f.size
     })));
 
+    // Test Cloudinary configuration
+    try {
+      console.log('Testing Cloudinary configuration...');
+      const testResult = await cloudinary.api.ping();
+      console.log('Cloudinary ping successful:', testResult);
+    } catch (pingError) {
+      console.error('Cloudinary configuration error:', pingError);
+      return res.status(500).json({ error: 'Cloudinary configuration error', details: pingError.message });
+    }
+
     // Validate expiration input
     let hours = 1;
     if (req.body.expiration) {
@@ -45,15 +55,36 @@ export const uploadFiles = async (req, res) => {
       let resourceType = 'auto'; // Declare here to be accessible in catch block
       
       try {
-        // Simplified approach - use auto for everything to isolate the issue
-        const result = await cloudinary.uploader.upload(file.path, {
-          resource_type: 'auto',
-          use_filename: true,
-          original_filename: file.originalname,
-          type: 'upload',
-          overwrite: false,
-          flags: 'attachment'
-        });
+        // Check if file exists before uploading
+        if (!fs.existsSync(file.path)) {
+          console.error('File does not exist:', file.path);
+          continue;
+        }
+        
+        console.log('Attempting to upload file:', file.path);
+
+        let result;
+        try {
+          // Try file path upload first
+          result = await cloudinary.uploader.upload(file.path, {
+            resource_type: 'auto'
+          });
+        } catch (pathError) {
+          console.error('File path upload failed, trying buffer upload:', pathError.message);
+          
+          // Fallback to buffer upload
+          const fileBuffer = fs.readFileSync(file.path);
+          result = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+              { resource_type: 'auto' },
+              (error, uploadResult) => {
+                if (error) reject(error);
+                else resolve(uploadResult);
+              }
+            );
+            uploadStream.end(fileBuffer);
+          });
+        }
 
         uploadedFiles.push({
           filename: result.public_id,
