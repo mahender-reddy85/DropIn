@@ -27,12 +27,18 @@ export const uploadFiles = async (req, res) => {
     // Upload each to cloudinary
     for (const file of req.files) {
       // resource_type: 'auto' automatically detects if it's image/video/raw
+      // For PDFs and documents, explicitly use 'raw' to ensure proper access
+      const isPdfOrDoc = file.mimetype === 'application/pdf' || 
+                        file.mimetype.includes('document') || 
+                        file.mimetype.includes('text') ||
+                        file.originalname.toLowerCase().endsWith('.pdf');
+      
       const result = await cloudinary.uploader.upload(file.path, {
-        resource_type: 'auto',
+        resource_type: isPdfOrDoc ? 'raw' : 'auto',
         folder: 'dropin',
         use_filename: true,
         original_filename: file.originalname,
-        access_control: [{ access_type: 'anonymous' }]
+        type: 'upload' // Ensure public access type
       });
 
       uploadedFiles.push({
