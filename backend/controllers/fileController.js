@@ -2,7 +2,6 @@ import Transfer from '../models/Transfer.js';
 import cloudinary from '../config/cloudinary.js';
 import { nanoid } from 'nanoid';
 import fs from 'fs';
-import { Readable } from 'stream';
 import bcrypt from 'bcryptjs';
 import axios from 'axios';
 import archiver from 'archiver';
@@ -19,14 +18,18 @@ const cleanupLocalFiles = (files) => {
 
 export const uploadFiles = async (req, res) => {
   try {
-    console.log('Upload request received:', {
-      fileCount: req.files?.length,
-      hasPassword: !!req.body.password,
-      expiration: req.body.expiration
-    });
-
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
+    }
+
+    // Validate expiration input
+    let hours = 1;
+    if (req.body.expiration) {
+      const expHours = parseInt(req.body.expiration);
+      if (isNaN(expHours) || expHours < 1 || expHours > 168) { // Max 7 days
+        return res.status(400).json({ error: 'Expiration must be between 1 and 168 hours' });
+      }
+      hours = expHours;
     }
 
     const uploadedFiles = [];
@@ -34,8 +37,6 @@ export const uploadFiles = async (req, res) => {
     // Upload each to cloudinary with consistent public access
     for (const file of req.files) {
       try {
-        console.log('Processing file:', file.originalname);
-        
         // TEMPORARY FIX: Use simple upload without folder support for production stability
         const result = await cloudinary.uploader.upload(file.path, {
           resource_type: 'auto',
@@ -46,8 +47,6 @@ export const uploadFiles = async (req, res) => {
           overwrite: false,
           flags: 'attachment'
         });
-
-        console.log('Cloudinary upload successful:', result.public_id);
 
         uploadedFiles.push({
           filename: result.public_id,
@@ -74,12 +73,7 @@ export const uploadFiles = async (req, res) => {
       return res.status(400).json({ error: 'No files could be uploaded successfully' });
     }
 
-    const code = nanoid(8); // Updated to 8 characters max
-    // Link expiration config
-    let hours = 1;
-    if (req.body.expiration && !isNaN(req.body.expiration)) {
-      hours = parseInt(req.body.expiration);
-    }
+    const code = nanoid(12); // 12 characters for security as documented in README
     const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
 
     let hashedPassword = undefined;
@@ -100,12 +94,7 @@ export const uploadFiles = async (req, res) => {
     res.status(201).json({ code: transfer.code, expiresAt: transfer.expiresAt });
   } catch (error) {
     cleanupLocalFiles(req.files);
-    console.error('Upload Error Details:', {
-      message: error.message,
-      stack: error.stack,
-      fileCount: req.files?.length,
-      bodyKeys: Object.keys(req.body || {})
-    });
+    console.error('Upload Error:', error.message);
     res.status(500).json({ error: error.message || 'Server error during upload' });
   }
 };
@@ -242,8 +231,6 @@ export const downloadAllFiles = async (req, res) => {
     
     for (const file of transfer.files) {
       try {
-        console.log(`Processing file: ${file.originalname}, mimetype: ${file.mimetype}`);
-        
         let resourceType = "auto";
 
         // 🔥 Force correct type for PDFs
@@ -252,7 +239,6 @@ export const downloadAllFiles = async (req, res) => {
           file.originalname.toLowerCase().endsWith(".pdf")
         ) {
           resourceType = "raw";
-          console.log(`PDF detected, using resource_type: raw`);
         }
 
         const downloadUrl = cloudinary.url(file.public_id, {
@@ -260,8 +246,6 @@ export const downloadAllFiles = async (req, res) => {
           secure: true,
           flags: "attachment"
         });
-
-        console.log("Downloading:", downloadUrl);
 
         const response = await axios({
           url: downloadUrl,
@@ -271,25 +255,15 @@ export const downloadAllFiles = async (req, res) => {
           timeout: 30000 // 30 second timeout
         });
 
-        console.log(`Response status: ${response.status} for ${file.originalname}`);
-
         archive.append(response.data, { name: file.originalname });
         processedFiles++;
-        console.log(`Successfully added: ${file.originalname}`);
 
       } catch (err) {
         skippedFiles++;
         console.error(`Error with ${file.originalname}:`, err.message);
-        if (err.response) {
-          console.error(`HTTP Status: ${err.response.status}`);
-          console.error(`Response headers:`, err.response.headers);
-        }
-        console.error(`Full error:`, err);
       }
     }
     
-    console.log(`Archive summary: ${processedFiles} files processed, ${skippedFiles} files skipped`);
-
     // Finalize the archive
     archive.finalize();
 

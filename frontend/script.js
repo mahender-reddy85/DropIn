@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', function () {
     downloadFileList: document.getElementById('downloadFileList'),
     extendBtn: document.getElementById('extendBtn'),
     deleteBtn: document.getElementById('deleteBtn'),
-    downloadStats: document.getElementById('downloadStats'),
     downloadAllBtn: document.getElementById('downloadAllBtn'),
     dragDropOverlay: document.getElementById('dragDropOverlay')
   };
