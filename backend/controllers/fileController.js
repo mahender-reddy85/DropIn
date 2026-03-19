@@ -5,6 +5,8 @@ import fs from 'fs';
 import { Readable } from 'stream';
 import bcrypt from 'bcryptjs';
 import https from 'https';
+import archiver from 'archiver';
+import path from 'path';
 
 // Clean up temporary local files after uploading or on error
 const cleanupLocalFiles = (files) => {
@@ -164,6 +166,103 @@ export const downloadFile = async (req, res) => {
   } catch (error) {
     console.error('Download error:', error);
     res.status(500).json({ error: 'Download failed', details: error.message });
+  }
+};
+
+export const downloadAllFiles = async (req, res) => {
+  try {
+    console.log('Bulk download request received:', req.params);
+    const { code } = req.params;
+    
+    const transfer = await Transfer.findOne({ code });
+    console.log('Transfer found:', transfer ? 'Yes' : 'No');
+    
+    if (!transfer) {
+      console.log('Transfer not found for code:', code);
+      return res.status(404).json({ error: 'Transfer not found or expired' });
+    }
+    
+    // Optional password protection check
+    if (transfer.password) {
+      const pw = req.query.password || req.body.password;
+      if (!pw) {
+        return res.status(401).json({ error: 'Password required' });
+      }
+      const isMatch = await bcrypt.compare(pw, transfer.password);
+      if (!isMatch) {
+        return res.status(401).json({ error: 'Incorrect password' });
+      }
+    }
+    
+    // Check download limit
+    if (transfer.downloadsCount >= transfer.maxDownloads) {
+      console.log('Max downloads reached');
+      return res.status(403).json({ error: 'Max downloads reached' });
+    }
+
+    if (!transfer.files || transfer.files.length === 0) {
+      return res.status(404).json({ error: 'No files to download' });
+    }
+
+    // Increment download count for bulk download
+    transfer.downloadsCount += 1;
+    await transfer.save();
+    console.log('Download count incremented to:', transfer.downloadsCount);
+
+    // Create ZIP archive
+    const archive = archiver('zip', {
+      zlib: { level: 9 } // Maximum compression
+    });
+
+    // Set response headers for ZIP download
+    const zipFilename = `${transfer.code}_files.zip`;
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(zipFilename)}"`);
+    res.setHeader('Cache-Control', 'no-cache');
+
+    // Pipe archive to response
+    archive.pipe(res);
+
+    // Add each file to the archive
+    for (const file of transfer.files) {
+      try {
+        console.log(`Adding file to ZIP: ${file.originalname}`);
+        
+        // Download file from Cloudinary and add to ZIP
+        const fileStream = await new Promise((resolve, reject) => {
+          https.get(file.url, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (cloudRes) => {
+            if (cloudRes.statusCode >= 400) {
+              reject(new Error(`Failed to fetch ${file.originalname}: ${cloudRes.statusCode}`));
+              return;
+            }
+            resolve(cloudRes);
+          }).on('error', reject);
+        });
+
+        // Add file to archive with original name
+        archive.append(fileStream, { name: file.originalname });
+        
+      } catch (fileError) {
+        console.error(`Error adding file ${file.originalname}:`, fileError);
+        // Continue with other files even if one fails
+      }
+    }
+
+    // Finalize the archive
+    archive.finalize();
+
+    archive.on('error', (err) => {
+      console.error('Archive error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to create ZIP archive' });
+      }
+    });
+
+  } catch (error) {
+    console.error('Bulk download error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Bulk download failed', details: error.message });
+    }
   }
 };
 
