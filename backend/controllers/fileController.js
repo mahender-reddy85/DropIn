@@ -140,8 +140,10 @@ export const downloadFile = async (req, res) => {
     
     // Cloudinary gives us a URL, redirect to it so it downloads natively
     // Note: Cloudinary URLs don't force 'download' unless the flag `fl_attachment` is used.
-    // Let's modify the url to add `fl_attachment`
-    const downloadUrl = file.url.replace('/upload/', `/upload/fl_attachment:${encodeURIComponent(file.originalname)}/`);
+    let downloadUrl = file.url;
+    if (downloadUrl.includes('/image/upload/') || downloadUrl.includes('/video/upload/')) {
+      downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
+    }
     res.redirect(downloadUrl);
 
   } catch (error) {
