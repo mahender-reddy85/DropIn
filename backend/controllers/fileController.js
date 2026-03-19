@@ -117,8 +117,7 @@ export const getFilesInfo = async (req, res) => {
         originalname: f.originalname,
         size: f.size,
         mimetype: f.mimetype,
-        url: f.url, // the direct cloudinary url
-        downloadUrl: `/download/${transfer.code}/${f.filename}` // backend download endpoint
+        url: f.url
       }))
     });
   } catch (error) {
@@ -130,101 +129,32 @@ export const downloadFile = async (req, res) => {
   try {
     const { code, filename } = req.params;
     const transfer = await Transfer.findOne({ code });
-    if (!transfer) return res.status(404).json({ error: 'Transfer not found or expired' });
     
-    // Check abuse limit
+    if (!transfer) {
+      return res.status(404).json({ error: 'Transfer not found or expired' });
+    }
+    
+    // Check download limit
     if (transfer.downloadsCount >= transfer.maxDownloads) {
       return res.status(403).json({ error: 'Max downloads reached' });
     }
 
     const file = transfer.files.find(f => f.filename === filename);
-    if (!file) return res.status(404).json({ error: 'File not found' });
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
     
-    // Increment download count (Fixed: Only once)
+    // Increment download count
     transfer.downloadsCount += 1;
     await transfer.save();
     
-    // For PDFs and documents, use Cloudinary API download instead of URL access
-    if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
-      try {
-        console.log(`Downloading PDF via API: ${file.public_id}`);
-        
-        // Use Cloudinary API to get the file directly
-        const result = await cloudinary.api.resource(file.public_id, {
-          resource_type: 'raw'
-        });
-        
-        // Get the secure URL from API response and download it
-        const pdfUrl = result.secure_url;
-        
-        https.get(pdfUrl, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (cloudRes) => {
-          if (cloudRes.statusCode >= 400) {
-            console.error(`API URL failed: ${cloudRes.statusCode} for ${pdfUrl}`);
-            return res.status(cloudRes.statusCode).json({ error: `PDF Download Failed: ${cloudRes.statusCode}` });
-          }
-
-          res.setHeader('Content-Type', 'application/octet-stream');
-          res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalname)}"`);
-          res.setHeader('Content-Length', cloudRes.headers['content-length'] || file.size);
-          res.setHeader('Cache-Control', 'no-cache');
-          
-          cloudRes.pipe(res);
-        }).on('error', (err) => {
-          console.error('API DOWNLOAD ERROR:', err);
-          res.status(500).json({ error: 'PDF API download failed' });
-        });
-        return;
-        
-      } catch (apiError) {
-        console.error('Cloudinary API error:', apiError);
-        
-        // Final fallback: Try direct URL with different format
-        const fallbackUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/raw/upload/${file.public_id}`;
-        console.log(`Final fallback URL: ${fallbackUrl}`);
-        
-        https.get(fallbackUrl, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (fallbackRes) => {
-          if (fallbackRes.statusCode >= 400) {
-            return res.status(fallbackRes.statusCode).json({ error: `All download methods failed` });
-          }
-
-          res.setHeader('Content-Type', 'application/octet-stream');
-          res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalname)}"`);
-          res.setHeader('Content-Length', fallbackRes.headers['content-length'] || file.size);
-          res.setHeader('Cache-Control', 'no-cache');
-          
-          fallbackRes.pipe(res);
-        }).on('error', (err) => {
-          console.error('FALLBACK ERROR:', err);
-          res.status(500).json({ error: 'All PDF download methods failed' });
-        });
-        return;
-      }
-    }
+    // Redirect to direct Cloudinary URL
+    // This lets Cloudinary handle the download with proper headers
+    res.redirect(302, file.url);
     
-    // For non-PDFs, use direct URL access
-    https.get(file.url, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (cloudRes) => {
-      if (cloudRes.statusCode >= 400) {
-        console.error(`Direct access failed: ${cloudRes.statusCode} for ${file.url}`);
-        return res.status(cloudRes.statusCode).json({ error: `Cloud Proxy Failed: ${cloudRes.statusCode}` });
-      }
-
-      // Force 'application/octet-stream' for PDFs and docs to guarantee a download window
-      const isMedia = file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'));
-      const forcedMime = isMedia ? file.mimetype : 'application/octet-stream';
-
-      res.setHeader('Content-Type', forcedMime);
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalname)}"`);
-      res.setHeader('Content-Length', cloudRes.headers['content-length'] || file.size);
-      res.setHeader('Cache-Control', 'no-cache');
-      
-      cloudRes.pipe(res);
-    }).on('error', (err) => {
-      console.error('SECURE PROXY ERROR:', err);
-      res.status(500).json({ error: 'Secure proxy connection failed' });
-    });
   } catch (error) {
-    console.error('SERVER DOWNLOAD ERROR:', error);
-    res.status(500).json({ error: `Internal Downloader Error: ${error.message}` });
+    console.error('Download error:', error);
+    res.status(500).json({ error: 'Download failed' });
   }
 };
 
