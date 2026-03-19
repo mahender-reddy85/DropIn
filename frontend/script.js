@@ -321,7 +321,10 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        mode: 'cors',
+        cache: 'no-cache',
+        credentials: 'same-origin'
       });
 
       if (!response.ok) {
