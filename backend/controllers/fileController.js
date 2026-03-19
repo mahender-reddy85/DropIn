@@ -142,7 +142,12 @@ export const downloadFile = async (req, res) => {
     
     // Modern fetch-based proxying (Handles redirects automatically)
     const cloudRes = await fetch(file.url);
-    if (!cloudRes.ok) throw new Error(`Could not fetch from cloud: ${cloudRes.statusText}`);
+    
+    // Explicitly check the response status
+    if (cloudRes.status < 200 || cloudRes.status >= 300) {
+      console.error(`Cloud Proxy Error: Status ${cloudRes.status} (${cloudRes.statusText}) for ${file.url}`);
+      throw new Error(`Cloud returned status ${cloudRes.status} (${cloudRes.statusText})`);
+    }
 
     // Force 'application/octet-stream' for PDFs and docs to guarantee a download window
     const isMedia = file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'));
@@ -154,11 +159,13 @@ export const downloadFile = async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     
     // Pipe the web-stream back to the client
+    if (!cloudRes.body) throw new Error('Cloud response body is empty');
+    
     const sourceStream = Readable.fromWeb(cloudRes.body);
     sourceStream.pipe(res);
   } catch (error) {
     console.error('SERVER DOWNLOAD ERROR:', error);
-    res.status(500).json({ error: error.message || 'Failed to download file' });
+    res.status(500).json({ error: `Downloader: ${error.message}` });
   }
 };
 
