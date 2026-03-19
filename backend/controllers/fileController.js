@@ -42,41 +42,18 @@ export const uploadFiles = async (req, res) => {
 
     // Upload each to cloudinary with consistent public access
     for (const file of req.files) {
+      let resourceType = 'auto'; // Declare here to be accessible in catch block
+      
       try {
-        // Use auto resource type for most files, only override for specific cases
-        let resourceType = 'auto';
-        
-        // Only force specific resource types if auto-detection might fail
-        if (file.mimetype.startsWith('video/')) {
-          resourceType = 'video';
-        } else if (file.mimetype.startsWith('audio/')) {
-          resourceType = 'video'; // Cloudinary treats audio as video
-        }
-
-        let result;
-        try {
-          result = await cloudinary.uploader.upload(file.path, {
-            resource_type: resourceType,
-            folder: 'dropin',
-            use_filename: true,
-            original_filename: file.originalname,
-            type: 'upload',
-            overwrite: false,
-            flags: 'attachment'
-          });
-        } catch (resourceError) {
-          // Fallback to auto if specific resource type fails
-          console.warn('Resource type upload failed, falling back to auto:', resourceError.message);
-          result = await cloudinary.uploader.upload(file.path, {
-            resource_type: 'auto',
-            folder: 'dropin',
-            use_filename: true,
-            original_filename: file.originalname,
-            type: 'upload',
-            overwrite: false,
-            flags: 'attachment'
-          });
-        }
+        // Simplified approach - use auto for everything to isolate the issue
+        const result = await cloudinary.uploader.upload(file.path, {
+          resource_type: 'auto',
+          use_filename: true,
+          original_filename: file.originalname,
+          type: 'upload',
+          overwrite: false,
+          flags: 'attachment'
+        });
 
         uploadedFiles.push({
           filename: result.public_id,
@@ -96,6 +73,11 @@ export const uploadFiles = async (req, res) => {
           size: file.size,
           path: file.path,
           resourceType: resourceType
+        });
+        console.error('Cloudinary error details:', {
+          message: uploadError.message,
+          name: uploadError.name,
+          http_code: uploadError.http_code
         });
         // Continue with other files instead of failing completely
         continue;
