@@ -555,32 +555,14 @@ document.addEventListener('DOMContentLoaded', function () {
     showToast('Starting download...');
     const url = `${API_BASE_URL}/api/download/${code}/${filename}`;
     
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Download failed');
-      
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = originalname;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Cleanup
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
-      }, 100);
-      
-      showToast('Download complete!');
-    } catch (err) {
-      console.error('Download error:', err);
-      // Fallback: direct navigation if fetch is blocked
-      window.location.href = url;
-      showToast('Attempting direct download...');
-    }
+    // Direct location change for the signed backend redirect
+    // This is the most reliable method for forcing downloads cross-origin.
+    window.location.href = url;
+    
+    // We add a short timeout for the "complete" message since we don't know exactly when it finishes
+    setTimeout(() => {
+       showToast('Download started!');
+    }, 1000);
   }
 
   function openQrScanner() {

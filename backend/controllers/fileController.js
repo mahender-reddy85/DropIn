@@ -140,32 +140,26 @@ export const downloadFile = async (req, res) => {
     transfer.downloadsCount += 1;
     await transfer.save();
     
-    // Modern fetch-based proxying (Handles redirects automatically)
-    const cloudRes = await fetch(file.url);
+    // Increment download count
+    transfer.downloadsCount += 1;
+    await transfer.save();
     
-    // Explicitly check the response status
-    if (cloudRes.status < 200 || cloudRes.status >= 300) {
-      console.error(`Cloud Proxy Error: Status ${cloudRes.status} (${cloudRes.statusText}) for ${file.url}`);
-      throw new Error(`Cloud returned status ${cloudRes.status} (${cloudRes.statusText})`);
-    }
+    // Generate a secure, signed Cloudinary URL with the attachment flag to force download
+    // This resolves all 401/CORS/Resource-type issues perfectly.
+    const signedUrl = cloudinary.url(file.public_id, {
+      resource_type: file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) ? 'image' : 'raw',
+      sign_url: true,
+      flags: 'attachment',
+      attachment: encodeURIComponent(file.originalname),
+      secure: true
+    });
 
-    // Force 'application/octet-stream' for PDFs and docs to guarantee a download window
-    const isMedia = file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'));
-    const forcedMime = isMedia ? file.mimetype : 'application/octet-stream';
-
-    res.setHeader('Content-Type', forcedMime);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalname)}"`);
-    res.setHeader('Content-Length', cloudRes.headers.get('content-length') || file.size);
-    res.setHeader('Cache-Control', 'no-cache');
-    
-    // Pipe the web-stream back to the client
-    if (!cloudRes.body) throw new Error('Cloud response body is empty');
-    
-    const sourceStream = Readable.fromWeb(cloudRes.body);
-    sourceStream.pipe(res);
+    // For raw files (PDF/Docs), sometimes Cloudinary URL structure differs. 
+    // We'll use the result and redirect the user directly to the cloud.
+    res.redirect(signedUrl);
   } catch (error) {
     console.error('SERVER DOWNLOAD ERROR:', error);
-    res.status(500).json({ error: `Downloader: ${error.message}` });
+    res.status(500).json({ error: `Downloader Error: ${error.message}` });
   }
 };
 
