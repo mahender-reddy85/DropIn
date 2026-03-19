@@ -294,7 +294,7 @@ h1 i {
 
 .folder-path {
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: var(--primary-color);
   font-weight: 400;
   font-style: italic;
   margin-bottom: 0.25rem;

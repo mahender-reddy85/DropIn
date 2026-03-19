@@ -237,8 +237,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const fileSize = formatFileSize(file.size);
     const fileIcon = getFileIcon(file.type);
     
-    // Extract folder path and filename
-    const filePath = file.name || file.originalname || file.webkitRelativePath || 'Unknown';
+    // Extract folder path and filename - use relativePath if available (from folder upload)
+    const filePath = file.relativePath || file.name || file.originalname || file.webkitRelativePath || 'Unknown';
     const folderPath = filePath.includes('/') ? filePath.substring(0, filePath.lastIndexOf('/')) : '';
     const fileName = filePath.includes('/') ? filePath.substring(filePath.lastIndexOf('/') + 1) : filePath;
     
@@ -481,13 +481,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const fileSize = formatFileSize(file.size);
       const fileIcon = getFileIcon(file.mimetype);
-      const safeName = escapeHtml(file.originalname);
-      const displayName = truncateFileName(file.originalname, 25);
+      
+      // Use relativePath for folder structure if available
+      const filePath = file.relativePath || file.originalname;
+      const folderPath = filePath.includes('/') ? filePath.substring(0, filePath.lastIndexOf('/')) : '';
+      const fileName = filePath.includes('/') ? filePath.substring(filePath.lastIndexOf('/') + 1) : filePath;
+      
+      const safeName = escapeHtml(fileName);
+      const safePath = escapeHtml(folderPath);
+      const displayName = truncateFileName(fileName, 25);
 
       fileItem.innerHTML = `
         <div class="file-info">
           <span class="file-icon">${fileIcon}</span>
-          <span class="file-name preview-trigger" title="${safeName}">${displayName}</span>
+          <div class="file-name-container">
+            ${safePath ? `<span class="folder-path">${safePath}/</span><br>` : ''}
+            <span class="file-name preview-trigger" title="${filePath}">${displayName}</span>
+          </div>
           <span class="file-size">${fileSize}</span>
         </div>
       `;

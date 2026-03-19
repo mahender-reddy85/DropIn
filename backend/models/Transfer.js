@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 const fileSchema = new mongoose.Schema({
   filename: { type: String, required: true },
   originalname: { type: String, required: true },
+  displayName: { type: String, required: true },
+  relativePath: { type: String, required: true },
   mimetype: { type: String, required: true },
   size: { type: Number, required: true },
   url: { type: String, required: true },
