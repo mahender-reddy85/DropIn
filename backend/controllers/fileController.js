@@ -140,10 +140,6 @@ export const downloadFile = async (req, res) => {
     transfer.downloadsCount += 1;
     await transfer.save();
     
-    // Increment download count
-    transfer.downloadsCount += 1;
-    await transfer.save();
-    
     // Modern fetch-based proxying (Handles redirects automatically)
     const cloudRes = await fetch(file.url);
     if (!cloudRes.ok) throw new Error('Could not fetch file from cloud storage');

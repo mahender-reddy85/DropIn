@@ -1,10 +1,6 @@
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:3001' : 'https://dropin-dn6i.onrender.com';
 
-console.log('Script loaded and DOMContentLoaded event listener attached');
-
 document.addEventListener('DOMContentLoaded', function () {
-  console.log('DOMContentLoaded event fired');
-
   // Cache all DOM elements with proper error handling
   const elements = {
     sendTab: document.getElementById('sendTab'),
