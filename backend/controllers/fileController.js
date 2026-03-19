@@ -4,7 +4,7 @@ import { nanoid } from 'nanoid';
 import fs from 'fs';
 import { Readable } from 'stream';
 import bcrypt from 'bcryptjs';
-import https from 'https';
+import axios from 'axios';
 import archiver from 'archiver';
 
 // Clean up temporary local files after uploading or on error
@@ -208,31 +208,26 @@ export const downloadAllFiles = async (req, res) => {
     // Pipe archive to response
     archive.pipe(res);
 
-    // Add each file to the archive
+    // Add each file to archive
     for (const file of transfer.files) {
       try {
         let downloadUrl = file.url;
 
-        // Force download behavior for ALL file types
         downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
 
-        // Download file from Cloudinary and add to ZIP
-        const fileStream = await new Promise((resolve, reject) => {
-          https.get(downloadUrl, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (cloudRes) => {
-            if (cloudRes.statusCode >= 400) {
-              reject(new Error(`Failed to fetch ${file.originalname}: ${cloudRes.statusCode}`));
-              return;
-            }
-            resolve(cloudRes);
-          }).on('error', reject);
+        console.log("Downloading:", downloadUrl);
+
+        const response = await axios({
+          url: downloadUrl,
+          method: 'GET',
+          responseType: 'stream',
+          maxRedirects: 5
         });
 
-        // Add file to archive with original name
-        archive.append(fileStream, { name: file.originalname });
+        archive.append(response.data, { name: file.originalname });
 
-      } catch (fileError) {
-        console.error(`Error adding file ${file.originalname}:`, fileError);
-        // Continue with other files even if one fails
+      } catch (err) {
+        console.error(`Error with ${file.originalname}:`, err.message);
       }
     }
 
