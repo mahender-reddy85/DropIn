@@ -446,10 +446,16 @@ document.addEventListener('DOMContentLoaded', function () {
       previewEl.id = 'filePreviewTooltip';
       previewEl.className = 'file-preview-tooltip';
       document.body.appendChild(previewEl);
+      
+      // Close preview on clicking anywhere outside
+      document.addEventListener('click', () => {
+        previewEl.classList.remove('visible');
+      });
     }
 
     const isImage = mime => mime && mime.startsWith('image/');
     const isVideo = mime => mime && mime.startsWith('video/');
+    const isAudio = mime => mime && mime.startsWith('audio/');
 
     files.forEach(file => {
       const fileItem = document.createElement('div');
@@ -473,60 +479,59 @@ document.addEventListener('DOMContentLoaded', function () {
       `;
 
       const downloadBtn = fileItem.querySelector('.download-btn');
-      downloadBtn.addEventListener('click', () => downloadFile(code, file.filename, file.originalname));
-
-      // Hover preview
-      const trigger = fileItem.querySelector('.preview-trigger');
-      trigger.addEventListener('mouseenter', (e) => {
-        if (window.innerWidth > 768) {
-          showPreview(e);
-        }
-      });
-
-      trigger.addEventListener('click', (e) => {
+      downloadBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        showPreview(e);
+        downloadFile(code, file.filename, file.originalname);
       });
 
-      function showPreview(e) {
+      // Show preview trigger
+      const trigger = fileItem.querySelector('.preview-trigger');
+      
+      const showPreview = (e) => {
+        e.stopPropagation();
         if (isImage(file.mimetype)) {
           previewEl.innerHTML = `<img src="${file.url}" alt="${safeName}" />`;
         } else if (isVideo(file.mimetype)) {
           previewEl.innerHTML = `<video src="${file.url}" muted autoplay loop playsinline></video>`;
+        } else if (isAudio(file.mimetype)) {
+          previewEl.innerHTML = `
+            <div class="preview-file-card">
+              <span class="preview-big-icon"><i class="fas fa-music"></i></span>
+              <span class="preview-file-name">${safeName}</span>
+              <audio controls src="${file.url}" style="width: 100%; margin-top: 10px;"></audio>
+            </div>`;
         } else {
+          // General Preview for PDFs and others
           previewEl.innerHTML = `
             <div class="preview-file-card">
               <span class="preview-big-icon">${fileIcon}</span>
               <span class="preview-file-name">${safeName}</span>
               <span class="preview-file-size">${fileSize}</span>
+              <span style="font-size: 0.7rem; color: var(--primary-color); margin-top: 5px;">(Tap download icon to save)</span>
             </div>`;
         }
         previewEl.classList.add('visible');
         if (window.innerWidth > 768) {
           positionPreview(e, previewEl);
         }
-      }
+      };
+
+      trigger.addEventListener('mouseenter', (e) => {
+        if (window.innerWidth > 768) showPreview(e);
+      });
 
       trigger.addEventListener('mousemove', (e) => {
-        if (window.innerWidth > 768) {
-          positionPreview(e, previewEl);
-        }
+        if (window.innerWidth > 768) positionPreview(e, previewEl);
       });
 
       trigger.addEventListener('mouseleave', () => {
-        if (window.innerWidth > 768) {
-          previewEl.classList.remove('visible');
-        }
+        if (window.innerWidth > 768) previewEl.classList.remove('visible');
       });
 
-      // Close preview on clicking outside
-      document.addEventListener('click', () => {
-        previewEl.classList.remove('visible');
-      });
+      trigger.addEventListener('click', showPreview);
 
       elements.downloadFileList.appendChild(fileItem);
     });
-
 
     if (elements.downloadPreview) {
       elements.downloadPreview.style.display = 'block';
