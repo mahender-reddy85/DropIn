@@ -19,6 +19,12 @@ const cleanupLocalFiles = (files) => {
 
 export const uploadFiles = async (req, res) => {
   try {
+    console.log('Upload request received:', {
+      fileCount: req.files?.length,
+      hasPassword: !!req.body.password,
+      expiration: req.body.expiration
+    });
+
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
     }
@@ -28,32 +34,24 @@ export const uploadFiles = async (req, res) => {
     // Upload each to cloudinary with consistent public access
     for (const file of req.files) {
       try {
-        // Extract folder path from originalname if present (from webkitdirectory)
-        const folderPath = file.originalname.includes('/') ? 
-          file.originalname.substring(0, file.originalname.lastIndexOf('/')) : '';
-        const fileName = file.originalname.includes('/') ? 
-          file.originalname.substring(file.originalname.lastIndexOf('/') + 1) : 
-          file.originalname;
-
-        // Sanitize folder path for Cloudinary (remove invalid characters)
-        const sanitizedPath = folderPath.replace(/[^a-zA-Z0-9_-]/g, '_');
+        console.log('Processing file:', file.originalname);
         
-        // Create Cloudinary folder structure
-        const cloudinaryFolder = sanitizedPath ? `dropin/${sanitizedPath}` : 'dropin';
-        
+        // TEMPORARY FIX: Use simple upload without folder support for production stability
         const result = await cloudinary.uploader.upload(file.path, {
           resource_type: 'auto',
-          folder: cloudinaryFolder,
+          folder: 'dropin',
           use_filename: true,
-          original_filename: fileName,
+          original_filename: file.originalname,
           type: 'upload', // 🔥 THIS IS KEY - ensures public delivery
           overwrite: false,
           flags: 'attachment'
         });
 
+        console.log('Cloudinary upload successful:', result.public_id);
+
         uploadedFiles.push({
           filename: result.public_id,
-          originalname: file.originalname, // Keep full path for display
+          originalname: file.originalname,
           mimetype: file.mimetype,
           size: file.size,
           url: result.secure_url,
@@ -70,6 +68,11 @@ export const uploadFiles = async (req, res) => {
 
     // Cleanup local uploads
     cleanupLocalFiles(req.files);
+
+    // Check if any files were successfully uploaded
+    if (uploadedFiles.length === 0) {
+      return res.status(400).json({ error: 'No files could be uploaded successfully' });
+    }
 
     const code = nanoid(8); // Updated to 8 characters max
     // Link expiration config
@@ -97,7 +100,12 @@ export const uploadFiles = async (req, res) => {
     res.status(201).json({ code: transfer.code, expiresAt: transfer.expiresAt });
   } catch (error) {
     cleanupLocalFiles(req.files);
-    console.error('Upload Error:', error);
+    console.error('Upload Error Details:', {
+      message: error.message,
+      stack: error.stack,
+      fileCount: req.files?.length,
+      bodyKeys: Object.keys(req.body || {})
+    });
     res.status(500).json({ error: error.message || 'Server error during upload' });
   }
 };
