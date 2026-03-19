@@ -24,21 +24,15 @@ export const uploadFiles = async (req, res) => {
 
     const uploadedFiles = [];
     
-    // Upload each to cloudinary
+    // Upload each to cloudinary with consistent public access
     for (const file of req.files) {
-      // resource_type: 'auto' automatically detects if it's image/video/raw
-      // For PDFs and documents, explicitly use 'raw' to ensure proper access
-      const isPdfOrDoc = file.mimetype === 'application/pdf' || 
-                        file.mimetype.includes('document') || 
-                        file.mimetype.includes('text') ||
-                        file.originalname.toLowerCase().endsWith('.pdf');
-      
       const result = await cloudinary.uploader.upload(file.path, {
-        resource_type: isPdfOrDoc ? 'raw' : 'auto',
+        resource_type: 'auto',
         folder: 'dropin',
         use_filename: true,
         original_filename: file.originalname,
-        type: 'upload' // Ensure public access type
+        access_mode: 'public',
+        overwrite: false
       });
 
       uploadedFiles.push({
@@ -148,8 +142,58 @@ export const downloadFile = async (req, res) => {
     transfer.downloadsCount += 1;
     await transfer.save();
     
-    // Redirect to direct Cloudinary URL
-    // This lets Cloudinary handle the download with proper headers
+    // Generate fresh URLs for all file types to ensure access
+    try {
+      let resourceType = 'auto';
+      let format = null;
+      
+      // Determine resource type and format based on mimetype
+      if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
+        resourceType = 'raw';
+        format = 'pdf';
+      } else if (file.mimetype.startsWith('image/')) {
+        resourceType = 'image';
+        // Extract format from mimetype (e.g., 'image/jpeg' -> 'jpeg')
+        if (file.mimetype.includes('/')) {
+          format = file.mimetype.split('/')[1];
+        }
+      } else if (file.mimetype.startsWith('video/')) {
+        resourceType = 'video';
+        if (file.mimetype.includes('/')) {
+          format = file.mimetype.split('/')[1];
+        }
+      } else if (file.mimetype.startsWith('audio/')) {
+        resourceType = 'video'; // Cloudinary treats audio as video resource type
+        if (file.mimetype.includes('/')) {
+          format = file.mimetype.split('/')[1];
+        }
+      } else {
+        resourceType = 'raw'; // For documents and other files
+      }
+      
+      // Generate fresh public URL
+      const urlOptions = {
+        resource_type: resourceType,
+        secure: true,
+        type: 'upload'
+      };
+      
+      if (format) {
+        urlOptions.format = format;
+      }
+      
+      const freshUrl = cloudinary.url(file.public_id, urlOptions);
+      
+      console.log(`Generated fresh URL for ${file.mimetype}: ${freshUrl}`);
+      res.redirect(302, freshUrl);
+      return;
+      
+    } catch (urlError) {
+      console.error('URL generation failed:', urlError);
+    }
+    
+    // Fallback to original URL
+    console.log(`Fallback to original URL: ${file.url}`);
     res.redirect(302, file.url);
     
   } catch (error) {
