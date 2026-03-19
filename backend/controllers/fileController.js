@@ -121,40 +121,49 @@ export const getFilesInfo = async (req, res) => {
 
 export const downloadFile = async (req, res) => {
   try {
+    console.log('Download request received:', req.params);
     const { code, filename } = req.params;
+    
     const transfer = await Transfer.findOne({ code });
+    console.log('Transfer found:', transfer ? 'Yes' : 'No');
     
     if (!transfer) {
+      console.log('Transfer not found for code:', code);
       return res.status(404).json({ error: 'Transfer not found or expired' });
     }
     
     // Check download limit
     if (transfer.downloadsCount >= transfer.maxDownloads) {
+      console.log('Max downloads reached');
       return res.status(403).json({ error: 'Max downloads reached' });
     }
 
     const file = transfer.files.find(f => f.filename === filename);
+    console.log('File found:', file ? `Yes (${file.originalname})` : 'No');
+    
     if (!file) {
+      console.log('File not found:', filename);
+      console.log('Available files:', transfer.files.map(f => f.filename));
       return res.status(404).json({ error: 'File not found' });
     }
     
     // Increment download count
     transfer.downloadsCount += 1;
     await transfer.save();
+    console.log('Download count incremented to:', transfer.downloadsCount);
     
-    // Try direct redirect to original URL first
-    try {
-      console.log(`Redirecting to: ${file.url}`);
-      res.redirect(302, file.url);
-      return;
-    } catch (redirectError) {
-      console.error('Redirect failed:', redirectError);
-      res.status(500).json({ error: 'Download failed' });
-    }
+    // Redirect to original Cloudinary URL
+    console.log('Redirecting to URL:', file.url);
+    
+    // Set headers before redirect
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    
+    res.redirect(302, file.url);
     
   } catch (error) {
     console.error('Download error:', error);
-    res.status(500).json({ error: 'Download failed' });
+    res.status(500).json({ error: 'Download failed', details: error.message });
   }
 };
 
