@@ -138,11 +138,8 @@ export const downloadFile = async (req, res) => {
     transfer.downloadsCount += 1;
     await transfer.save();
     
-    // Authenticated HTTPS Proxy request to Cloudinary
-    // Using Basic Auth headers (API_KEY:API_SECRET) to guarantee access to any file
-    const auth = Buffer.from(`${process.env.CLOUDINARY_API_KEY}:${process.env.CLOUDINARY_API_SECRET}`).toString('base64');
-    
-    https.get(file.url, { headers: { 'Authorization': `Basic ${auth}` } }, (cloudRes) => {
+    // Direct request to Cloudinary URL (publicly accessible)
+    https.get(file.url, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (cloudRes) => {
       if (cloudRes.statusCode >= 400) {
         console.error(`Auth Proxy Fail: ${cloudRes.statusCode} for ${file.url}`);
         return res.status(cloudRes.statusCode).json({ error: `Cloud Proxy Failed: ${cloudRes.statusCode}` });
