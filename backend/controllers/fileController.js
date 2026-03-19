@@ -45,7 +45,7 @@ export const uploadFiles = async (req, res) => {
     // Cleanup local uploads
     cleanupLocalFiles(req.files);
 
-    const code = nanoid(12); // Minimum 10-16 characters
+    const code = nanoid(8); // Updated to 8 characters max
     // Link expiration config
     let hours = 1;
     if (req.body.expiration && !isNaN(req.body.expiration)) {
