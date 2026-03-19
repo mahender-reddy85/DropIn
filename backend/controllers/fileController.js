@@ -142,17 +142,22 @@ export const downloadFile = async (req, res) => {
     
     // Modern fetch-based proxying (Handles redirects automatically)
     const cloudRes = await fetch(file.url);
-    if (!cloudRes.ok) throw new Error('Could not fetch file from cloud storage');
+    if (!cloudRes.ok) throw new Error(`Could not fetch from cloud: ${cloudRes.statusText}`);
 
-    res.setHeader('Content-Type', file.mimetype || 'application/octet-stream');
+    // Force 'application/octet-stream' for PDFs and docs to guarantee a download window
+    const isMedia = file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'));
+    const forcedMime = isMedia ? file.mimetype : 'application/octet-stream';
+
+    res.setHeader('Content-Type', forcedMime);
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalname)}"`);
-    res.setHeader('Content-Length', file.size);
+    res.setHeader('Content-Length', cloudRes.headers.get('content-length') || file.size);
+    res.setHeader('Cache-Control', 'no-cache');
     
     // Pipe the web-stream back to the client
     const sourceStream = Readable.fromWeb(cloudRes.body);
     sourceStream.pipe(res);
   } catch (error) {
-    console.error('Download Proxy Error:', error);
+    console.error('SERVER DOWNLOAD ERROR:', error);
     res.status(500).json({ error: error.message || 'Failed to download file' });
   }
 };
