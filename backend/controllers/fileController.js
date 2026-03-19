@@ -212,22 +212,29 @@ export const downloadAllFiles = async (req, res) => {
     // Add each file to archive
     for (const file of transfer.files) {
       try {
-        let downloadUrl = file.url;
+        let resourceType = "auto";
 
-        // 🔥 CRITICAL FIX: handle PDFs correctly
-        if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
-          downloadUrl = downloadUrl.replace('/image/upload/', '/raw/upload/');
+        // 🔥 Force correct type for PDFs
+        if (
+          file.mimetype === "application/pdf" ||
+          file.originalname.toLowerCase().endsWith(".pdf")
+        ) {
+          resourceType = "raw";
         }
 
-        // force download
-        downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
+        const downloadUrl = cloudinary.url(file.public_id, {
+          resource_type: resourceType,
+          type: "upload",
+          secure: true,
+          flags: "attachment"
+        });
 
         console.log("Downloading:", downloadUrl);
 
         const response = await axios({
           url: downloadUrl,
-          method: 'GET',
-          responseType: 'stream',
+          method: "GET",
+          responseType: "stream",
           maxRedirects: 5
         });
 
