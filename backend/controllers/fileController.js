@@ -210,6 +210,9 @@ export const downloadAllFiles = async (req, res) => {
     archive.pipe(res);
 
     // Add each file to archive
+    let processedFiles = 0;
+    let skippedFiles = 0;
+    
     for (const file of transfer.files) {
       try {
         console.log(`Processing file: ${file.originalname}, mimetype: ${file.mimetype}`);
@@ -238,18 +241,28 @@ export const downloadAllFiles = async (req, res) => {
           url: downloadUrl,
           method: "GET",
           responseType: "stream",
-          maxRedirects: 5
+          maxRedirects: 5,
+          timeout: 30000 // 30 second timeout
         });
 
         console.log(`Response status: ${response.status} for ${file.originalname}`);
 
         archive.append(response.data, { name: file.originalname });
+        processedFiles++;
+        console.log(`Successfully added: ${file.originalname}`);
 
       } catch (err) {
+        skippedFiles++;
         console.error(`Error with ${file.originalname}:`, err.message);
+        if (err.response) {
+          console.error(`HTTP Status: ${err.response.status}`);
+          console.error(`Response headers:`, err.response.headers);
+        }
         console.error(`Full error:`, err);
       }
     }
+    
+    console.log(`Archive summary: ${processedFiles} files processed, ${skippedFiles} files skipped`);
 
     // Finalize the archive
     archive.finalize();
