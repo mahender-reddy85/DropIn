@@ -144,18 +144,22 @@ export const downloadFile = async (req, res) => {
     transfer.downloadsCount += 1;
     await transfer.save();
     
-    // Generate a secure, signed Cloudinary URL with the attachment flag to force download
-    // This resolves all 401/CORS/Resource-type issues perfectly.
+    // Identify if the file should be treated as an 'image', 'video', or 'raw' file in Cloudinary
+    let resType = 'raw';
+    if (file.mimetype) {
+      if (file.mimetype.startsWith('image/')) resType = 'image';
+      if (file.mimetype.startsWith('video/')) resType = 'video';
+    }
+
+    // Generate a secure, Cloudinary URL with the attachment flag to force download
     const signedUrl = cloudinary.url(file.public_id, {
-      resource_type: file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) ? 'image' : 'raw',
-      sign_url: true,
+      resource_type: resType,
       flags: 'attachment',
       attachment: encodeURIComponent(file.originalname),
       secure: true
     });
 
-    // For raw files (PDF/Docs), sometimes Cloudinary URL structure differs. 
-    // We'll use the result and redirect the user directly to the cloud.
+    console.log(`Generated Download URL for ${file.originalname}: ${signedUrl}`);
     res.redirect(signedUrl);
   } catch (error) {
     console.error('SERVER DOWNLOAD ERROR:', error);
