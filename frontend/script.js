@@ -401,6 +401,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     elements.downloadFileList.innerHTML = '';
 
+    // Create shared preview tooltip
+    let previewEl = document.getElementById('filePreviewTooltip');
+    if (!previewEl) {
+      previewEl = document.createElement('div');
+      previewEl.id = 'filePreviewTooltip';
+      previewEl.className = 'file-preview-tooltip';
+      document.body.appendChild(previewEl);
+    }
+
+    const isImage = mime => mime && mime.startsWith('image/');
+    const isVideo = mime => mime && mime.startsWith('video/');
+
     files.forEach(file => {
       const fileItem = document.createElement('div');
       fileItem.className = 'file-item';
@@ -412,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function () {
       fileItem.innerHTML = `
         <div class="file-info">
           <span class="file-icon">${fileIcon}</span>
-          <span class="file-name">${safeName}</span>
+          <span class="file-name preview-trigger">${safeName}</span>
           <span class="file-size">${fileSize}</span>
         </div>
         <a class="download-btn" aria-label="Download ${safeName}">
@@ -425,12 +437,55 @@ document.addEventListener('DOMContentLoaded', function () {
       const downloadBtn = fileItem.querySelector('.download-btn');
       downloadBtn.addEventListener('click', () => downloadFile(file.url, file.originalname));
 
+      // Hover preview
+      const trigger = fileItem.querySelector('.preview-trigger');
+      trigger.addEventListener('mouseenter', (e) => {
+        if (isImage(file.mimetype)) {
+          previewEl.innerHTML = `<img src="${file.url}" alt="${safeName}" />`;
+        } else if (isVideo(file.mimetype)) {
+          previewEl.innerHTML = `<video src="${file.url}" muted autoplay loop playsinline></video>`;
+        } else {
+          previewEl.innerHTML = `
+            <div class="preview-file-card">
+              <span class="preview-big-icon">${fileIcon}</span>
+              <span class="preview-file-name">${safeName}</span>
+              <span class="preview-file-size">${fileSize}</span>
+            </div>`;
+        }
+        previewEl.classList.add('visible');
+        positionPreview(e, previewEl);
+      });
+
+      trigger.addEventListener('mousemove', (e) => positionPreview(e, previewEl));
+
+      trigger.addEventListener('mouseleave', () => {
+        previewEl.classList.remove('visible');
+      });
+
       elements.downloadFileList.appendChild(fileItem);
     });
+
 
     if (elements.downloadPreview) {
       elements.downloadPreview.style.display = 'block';
     }
+  }
+
+  function positionPreview(e, el) {
+    const padding = 20;
+    let x = e.clientX + padding;
+    let y = e.clientY + padding;
+
+    // Check bounds
+    if (x + 300 > window.innerWidth) {
+      x = e.clientX - 320;
+    }
+    if (y + 300 > window.innerHeight) {
+      y = e.clientY - 320;
+    }
+
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
   }
 
   async function downloadFile(url, originalname) {
