@@ -229,7 +229,6 @@ export const downloadAllFiles = async (req, res) => {
         }
 
         const downloadUrl = cloudinary.url(file.public_id, {
-          resource_type: resourceType,
           type: "upload",
           secure: true,
           flags: "attachment"
