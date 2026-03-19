@@ -111,7 +111,8 @@ export const getFilesInfo = async (req, res) => {
         originalname: f.originalname,
         size: f.size,
         mimetype: f.mimetype,
-        url: f.url // the direct cloudinary url
+        url: f.url, // the direct cloudinary url
+        downloadUrl: `/download/${transfer.code}/${f.filename}` // backend download endpoint
       }))
     });
   } catch (error) {
