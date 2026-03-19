@@ -144,45 +144,67 @@ export const downloadFile = async (req, res) => {
     transfer.downloadsCount += 1;
     await transfer.save();
     
-    // Direct request to Cloudinary URL (publicly accessible)
+    // For PDFs and documents, use Cloudinary API download instead of URL access
+    if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
+      try {
+        console.log(`Downloading PDF via API: ${file.public_id}`);
+        
+        // Use Cloudinary API to get the file directly
+        const result = await cloudinary.api.resource(file.public_id, {
+          resource_type: 'raw'
+        });
+        
+        // Get the secure URL from API response and download it
+        const pdfUrl = result.secure_url;
+        
+        https.get(pdfUrl, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (cloudRes) => {
+          if (cloudRes.statusCode >= 400) {
+            console.error(`API URL failed: ${cloudRes.statusCode} for ${pdfUrl}`);
+            return res.status(cloudRes.statusCode).json({ error: `PDF Download Failed: ${cloudRes.statusCode}` });
+          }
+
+          res.setHeader('Content-Type', 'application/octet-stream');
+          res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalname)}"`);
+          res.setHeader('Content-Length', cloudRes.headers['content-length'] || file.size);
+          res.setHeader('Cache-Control', 'no-cache');
+          
+          cloudRes.pipe(res);
+        }).on('error', (err) => {
+          console.error('API DOWNLOAD ERROR:', err);
+          res.status(500).json({ error: 'PDF API download failed' });
+        });
+        return;
+        
+      } catch (apiError) {
+        console.error('Cloudinary API error:', apiError);
+        
+        // Final fallback: Try direct URL with different format
+        const fallbackUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/raw/upload/${file.public_id}`;
+        console.log(`Final fallback URL: ${fallbackUrl}`);
+        
+        https.get(fallbackUrl, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (fallbackRes) => {
+          if (fallbackRes.statusCode >= 400) {
+            return res.status(fallbackRes.statusCode).json({ error: `All download methods failed` });
+          }
+
+          res.setHeader('Content-Type', 'application/octet-stream');
+          res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalname)}"`);
+          res.setHeader('Content-Length', fallbackRes.headers['content-length'] || file.size);
+          res.setHeader('Cache-Control', 'no-cache');
+          
+          fallbackRes.pipe(res);
+        }).on('error', (err) => {
+          console.error('FALLBACK ERROR:', err);
+          res.status(500).json({ error: 'All PDF download methods failed' });
+        });
+        return;
+      }
+    }
+    
+    // For non-PDFs, use direct URL access
     https.get(file.url, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (cloudRes) => {
       if (cloudRes.statusCode >= 400) {
         console.error(`Direct access failed: ${cloudRes.statusCode} for ${file.url}`);
-        
-        // Fallback: Generate signed URL for PDFs and documents
-        if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
-          try {
-            const signedUrl = cloudinary.url(file.public_id, {
-              resource_type: 'raw',
-              sign_url: true,
-              expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiry
-            });
-            
-            console.log(`Retrying with signed URL: ${signedUrl}`);
-            https.get(signedUrl, { headers: { 'User-Agent': 'DropIn-App/1.0' } }, (signedRes) => {
-              if (signedRes.statusCode >= 400) {
-                return res.status(signedRes.statusCode).json({ error: `Signed URL Failed: ${signedRes.statusCode}` });
-              }
-              
-              const isMedia = file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'));
-              const forcedMime = isMedia ? file.mimetype : 'application/octet-stream';
-
-              res.setHeader('Content-Type', forcedMime);
-              res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalname)}"`);
-              res.setHeader('Content-Length', signedRes.headers['content-length'] || file.size);
-              res.setHeader('Cache-Control', 'no-cache');
-              
-              signedRes.pipe(res);
-            }).on('error', (err) => {
-              console.error('SIGNED URL ERROR:', err);
-              res.status(500).json({ error: 'Signed URL download failed' });
-            });
-            return;
-          } catch (signError) {
-            console.error('Signed URL generation failed:', signError);
-          }
-        }
-        
         return res.status(cloudRes.statusCode).json({ error: `Cloud Proxy Failed: ${cloudRes.statusCode}` });
       }
 
