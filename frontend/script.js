@@ -741,7 +741,16 @@ document.addEventListener('DOMContentLoaded', function () {
       const url = window.location.origin + '/file/' + code;
       const subject = encodeURIComponent('DropIn File Transfer');
       const body = encodeURIComponent('Check out these files: ' + url);
-      window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
+      
+      // Use Gmail compose URL as primary for better experience on desktop browsers
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=&su=${subject}&body=${body}`;
+      
+      // Check if user is likely on a browser where we can open a tab
+      if (window.innerWidth > 768) {
+        window.open(gmailUrl, '_blank');
+      } else {
+        window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
+      }
     });
 
     if (elements.extendBtn) {

@@ -214,6 +214,32 @@ h1 i {
   background: #2563eb;
 }
 
+.secondary-btn {
+  background: var(--surface-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+.secondary-btn:hover {
+  background: var(--border-color);
+}
+
+.danger-btn {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.danger-btn:hover {
+  background: var(--error-color);
+  color: white;
+}
+
+[data-theme="dark"] .secondary-btn {
+  background: #334155;
+  color: white;
+}
+
 .file-list-container {
   margin-bottom: 2rem;
 }
