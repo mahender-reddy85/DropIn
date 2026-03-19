@@ -404,12 +404,16 @@ h1 i {
   flex-wrap: wrap;
 }
 
-.copy-btn, .share-btn, .email-btn {
+.copy-btn,
+.share-btn,
+.email-btn {
   background: var(--primary-color);
   color: white;
 }
 
-.copy-btn:hover, .share-btn:hover, .email-btn:hover {
+.copy-btn:hover,
+.share-btn:hover,
+.email-btn:hover {
   background: #2563eb;
 }
 
@@ -497,6 +501,7 @@ h1 i {
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -570,7 +575,7 @@ h1 i {
     gap: 0.75rem;
   }
 
-  .file-controls > div {
+  .file-controls>div {
     flex-direction: column;
     gap: 0.5rem;
   }
@@ -669,7 +674,7 @@ h1 i {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -694,8 +699,15 @@ h1 i {
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.7;
+    }
   }
 
   .modal-content {
@@ -876,7 +888,7 @@ h1 i {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   padding: 8px;
   max-width: 300px;
   max-height: 300px;
@@ -894,7 +906,8 @@ h1 i {
   transform: scale(1);
 }
 
-.file-preview-tooltip img, .file-preview-tooltip video {
+.file-preview-tooltip img,
+.file-preview-tooltip video {
   max-width: 100%;
   max-height: 280px;
   object-fit: contain;
@@ -946,10 +959,10 @@ h1 i {
     transform: translate(-50%, -50%) scale(0.95);
     width: 90vw;
     max-width: 320px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     background: var(--surface-color);
   }
-  
+
   .file-preview-tooltip.visible {
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
@@ -1000,9 +1013,17 @@ h1 i {
 }
 
 @keyframes pulse-animation {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* Enhanced X Button (Remove File) */

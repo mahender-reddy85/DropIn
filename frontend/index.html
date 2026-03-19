@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,8 +9,9 @@
   <link rel="icon" href="/dropin.jpg" type="image/jpg">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
+
 <body>
-  <div class="container"> 
+  <div class="container">
     <header>
       <h1><i class="fas fa-paper-plane"></i> DropIn</h1>
       <button id="themeToggle" class="theme-toggle" title="Toggle dark mode">
@@ -40,7 +42,8 @@
       <div class="file-controls">
         <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
           <label style="color: #666; font-size: 0.9em;"><i class="fas fa-lock"></i> Optional Password:</label>
-          <input type="password" id="uploadPassword" placeholder="Protect with password..." style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; flex-grow: 1;">
+          <input type="password" id="uploadPassword" placeholder="Protect with password..."
+            style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; flex-grow: 1;">
         </div>
         <div style="display: flex; gap: 10px; width: 100%;">
           <button id="clearBtn" class="btn clear-btn" style="flex:1;">
@@ -70,7 +73,7 @@
           <label for="receiveInput">Enter transfer code or paste link</label>
           <input type="text" id="receiveInput" placeholder="e.g., A1B2C3D4 or paste link" maxlength="100" />
         </div>
-        
+
         <div class="receive-input" style="margin-top:10px;" id="receivePasswordContainer">
           <label for="receivePassword"><i class="fas fa-lock"></i> Password (if protected)</label>
           <input type="password" id="receivePassword" placeholder="Enter password to unlock" />
@@ -93,7 +96,8 @@
         </div>
 
         <div id="downloadPreview" class="download-preview" style="display:none;">
-          <h4>Download Preview <span id="downloadStats" style="font-size: 0.8em; font-weight: normal; margin-left: 10px; color: #666;"></span></h4>
+          <h4>Download Preview <span id="downloadStats"
+              style="font-size: 0.8em; font-weight: normal; margin-left: 10px; color: #666;"></span></h4>
           <div class="download-controls" style="margin-bottom: 15px;">
             <button id="downloadAllBtn" class="btn download-all-btn" style="width: 100%;">
               <i class="fas fa-download"></i> Download All Files
@@ -110,34 +114,35 @@
       <div class="modal-content">
         <span id="closeCodeModal" class="close">&times;</span>
         <h3>Your Transfer Code</h3>
-      <div class="code-qr-wrapper">
-        <div id="codeDisplay" class="code-display"></div>
-        <div id="qrCodeContainer" class="qr-code-container"></div>
-      </div>
-      
-      <div class="modal-actions">
-        <button id="copyLinkBtn" class="btn copy-btn">
-          <i class="fas fa-copy"></i> Copy Link
-        </button>
-        <button id="shareBtn" class="btn share-btn">
-          <i class="fas fa-share-alt"></i> Share
-        </button>
-        <button id="emailBtn" class="btn email-btn">
-          <i class="fas fa-envelope"></i> Email
-        </button>
-      </div>
-      
-      <div class="modal-management" style="margin-top: 25px; border-top: 1px solid var(--border-color); padding-top: 20px;">
-        <h4 style="margin-bottom: 12px; font-size: 0.9rem; color: var(--text-secondary);">Manage this Link</h4>
-        <div style="display: flex; gap: 10px;">
-          <button id="extendBtn" class="btn secondary-btn" style="flex: 1; font-size: 0.85rem;">
-            <i class="fas fa-history"></i> Extend (+24h)
+        <div class="code-qr-wrapper">
+          <div id="codeDisplay" class="code-display"></div>
+          <div id="qrCodeContainer" class="qr-code-container"></div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="copyLinkBtn" class="btn copy-btn">
+            <i class="fas fa-copy"></i> Copy Link
           </button>
-          <button id="deleteBtn" class="btn danger-btn" style="flex: 1; font-size: 0.85rem;">
-            <i class="fas fa-trash-alt"></i> Destroy Now
+          <button id="shareBtn" class="btn share-btn">
+            <i class="fas fa-share-alt"></i> Share
+          </button>
+          <button id="emailBtn" class="btn email-btn">
+            <i class="fas fa-envelope"></i> Email
           </button>
         </div>
-      </div>
+
+        <div class="modal-management"
+          style="margin-top: 25px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+          <h4 style="margin-bottom: 12px; font-size: 0.9rem; color: var(--text-secondary);">Manage this Link</h4>
+          <div style="display: flex; gap: 10px;">
+            <button id="extendBtn" class="btn secondary-btn" style="flex: 1; font-size: 0.85rem;">
+              <i class="fas fa-history"></i> Extend (+24h)
+            </button>
+            <button id="deleteBtn" class="btn danger-btn" style="flex: 1; font-size: 0.85rem;">
+              <i class="fas fa-trash-alt"></i> Destroy Now
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -184,4 +189,5 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="/script.js"></script>
 </body>
+
 </html>

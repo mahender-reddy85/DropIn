@@ -43,7 +43,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // Dark mode toggle
   function initDarkModeToggle() {
     if (!elements.themeToggleBtn) {
-      console.warn('Theme toggle button not found');
       return;
     }
 
@@ -290,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function () {
     selectedFiles.forEach(file => {
       formData.append('files', file);
     });
-    
+
     const pwInput = document.getElementById('uploadPassword');
     if (pwInput && pwInput.value.trim().length > 0) {
       formData.append('password', pwInput.value.trim());
@@ -307,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
           const errData = await response.json();
           errMsg = errData.error || errMsg;
-        } catch (e) {}
+        } catch (e) { }
         throw new Error(errMsg);
       }
 
@@ -380,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       const pwInput = document.getElementById('receivePassword');
       const reqBody = (pwInput && pwInput.value.trim()) ? { password: pwInput.value.trim() } : {};
-      
+
       const response = await fetch(`${API_BASE_URL}/api/info/${code}`, {
         method: 'POST',
         headers: {
@@ -416,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       const data = await response.json();
-      
+
       // Reset password field styling on success
       const pwInput2 = document.getElementById('receivePassword');
       if (pwInput2) pwInput2.style.border = '';
@@ -446,7 +445,7 @@ document.addEventListener('DOMContentLoaded', function () {
       previewEl.id = 'filePreviewTooltip';
       previewEl.className = 'file-preview-tooltip';
       document.body.appendChild(previewEl);
-      
+
       // Close preview on clicking anywhere outside
       document.addEventListener('click', () => {
         previewEl.classList.remove('visible');
@@ -476,7 +475,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       // Show preview trigger
       const trigger = fileItem.querySelector('.preview-trigger');
-      
+
       const showPreview = (e) => {
         e.stopPropagation();
         if (isImage(file.mimetype)) {
@@ -548,14 +547,14 @@ document.addEventListener('DOMContentLoaded', function () {
   async function downloadFile(code, filename, originalname) {
     showToast('Starting download...');
     const url = `${API_BASE_URL}/api/download/${code}/${filename}`;
-    
+
     // Direct location change for the signed backend redirect
     // This is the most reliable method for forcing downloads cross-origin.
     window.location.href = url;
-    
+
     // We add a short timeout for the "complete" message since we don't know exactly when it finishes
     setTimeout(() => {
-       showToast('Download started!');
+      showToast('Download started!');
     }, 1000);
   }
 
@@ -575,17 +574,16 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function onScanSuccess(decodedText, decodedResult) {
-    console.log(`Code matched = ${decodedText}`, decodedResult);
 
     // Parse the URL to extract the code
     try {
       const url = new URL(decodedText);
       let code = url.searchParams.get('code');
-      
+
       if (!code && url.pathname.startsWith('/file/')) {
         code = url.pathname.split('/file/')[1];
       }
-      
+
       if (code) {
         elements.receiveInput.value = code;
         showToast('Scanned QR code: ' + code);
@@ -604,13 +602,13 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function onScanFailure(error) {
-    // console.warn(`Code scan error = ${error}`);
+    // QR scan error handling
   }
 
   function closeQrScanner() {
     if (qrScanner) {
-      qrScanner.clear().catch(error => {
-        console.error("Failed to clear html5QrcodeScanner. ", error);
+      qrScanner.clear().catch(() => {
+        // Handle scanner clear error silently
       });
       qrScanner = null;
     }
@@ -630,12 +628,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function truncateFileName(filename, maxLength = 10) {
     if (filename.length <= maxLength) return filename;
-    
+
     // Get file extension
     const lastDotIndex = filename.lastIndexOf('.');
     const extension = lastDotIndex > -1 ? filename.substring(lastDotIndex) : '';
     const nameWithoutExt = lastDotIndex > -1 ? filename.substring(0, lastDotIndex) : filename;
-    
+
     // Truncate name part and add extension back
     const truncatedName = nameWithoutExt.substring(0, maxLength) + '...' + extension;
     return truncatedName;
@@ -748,10 +746,10 @@ document.addEventListener('DOMContentLoaded', function () {
       const url = window.location.origin + '/file/' + code;
       const subject = encodeURIComponent('DropIn File Transfer');
       const body = encodeURIComponent('Check out these files: ' + url);
-      
+
       // Use Gmail compose URL as primary for better experience on desktop browsers
       const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=&su=${subject}&body=${body}`;
-      
+
       // Check if user is likely on a browser where we can open a tab
       if (window.innerWidth > 768) {
         window.open(gmailUrl, '_blank');
@@ -801,7 +799,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function handleUrlParams() {
     const urlParams = new URLSearchParams(window.location.search);
     let code = urlParams.get('code');
-    
+
     // Also check for /file/:id routing
     if (window.location.pathname.startsWith('/file/')) {
       code = window.location.pathname.split('/file/')[1];
@@ -821,17 +819,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     showToast('Preparing bulk download...');
-    
+
     try {
       const pwInput = document.getElementById('receivePassword');
       const password = pwInput ? pwInput.value.trim() : '';
-      
+
       // Construct URL with password if provided
       let downloadUrl = `${API_BASE_URL}/api/download-all/${currentCode}`;
       if (password) {
         downloadUrl += `?password=${encodeURIComponent(password)}`;
       }
-      
+
       // Create temporary link and trigger download
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -839,7 +837,7 @@ document.addEventListener('DOMContentLoaded', function () {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       showToast('Downloading all files...');
     } catch (error) {
       console.error('Bulk download error:', error);

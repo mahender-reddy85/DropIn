@@ -21,7 +21,7 @@ const transferSchema = new mongoose.Schema({
     required: true,
     index: { expires: '0s' } // TTL expiry: document is automatically deleted
   },
-  password: { 
+  password: {
     type: String,
     required: false
   },
