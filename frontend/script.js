@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', function () {
     closeCodeModal: document.getElementById('closeCodeModal'),
     closeScannerBtn: document.getElementById('closeScannerBtn'),
     qrModal: document.getElementById('qrModal'),
-    qrVideo: document.getElementById('qrVideo'),
     copyLinkBtn: document.getElementById('copyLinkBtn'),
     shareBtn: document.getElementById('shareBtn'),
     emailBtn: document.getElementById('emailBtn'),

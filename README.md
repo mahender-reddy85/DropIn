@@ -78,11 +78,15 @@ The backend should be deployed to a Node.js environment like Render or Railway. 
 - **GET** `/api/download/:code/:filename`
 - **Description**: Verifies transfer limit. Increments the download counter and redirects to the secure Cloudinary attachment URL.
 
-### 4. Delete Transfer
+### 4. Download All Files (Bulk)
+- **GET** `/api/download-all/:code`
+- **Description**: Downloads all files in a transfer as a ZIP archive. Increments download counter once for the bulk download.
+
+### 5. Delete Transfer
 - **DELETE** `/api/transfers/:code`
 - **Description**: Deletes the Cloudinary files and the MongoDB record instantly.
 
-### 5. Extend Expiry
+### 6. Extend Expiry
 - **PUT** `/api/transfers/:code/extend`
 - **Description**: Extends existing expiry length by an additional 24 hours.
 

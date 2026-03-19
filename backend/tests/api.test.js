@@ -52,4 +52,29 @@ describe('API Tests', () => {
     expect(res.body.success).toBe(true);
     expect(mockSave).toHaveBeenCalled();
   });
+
+  test('6. Bulk download for non-existent code returns 404', async () => {
+    jest.spyOn(Transfer, 'findOne').mockResolvedValueOnce(null);
+    const res = await request(app).get('/api/download-all/INVALID123');
+    expect(res.status).toBe(404);
+  });
+
+  test('7. Bulk download for valid code returns ZIP', async () => {
+    jest.spyOn(Transfer, 'findOne').mockResolvedValueOnce({
+      code: 'VALID123',
+      expiresAt: new Date(),
+      downloadsCount: 0,
+      files: [{
+        filename: 'test.pdf',
+        originalname: 'test.pdf',
+        mimetype: 'application/pdf',
+        size: 1024,
+        url: 'https://example.com/test.pdf',
+        public_id: 'test_pdf'
+      }]
+    });
+    const res = await request(app).get('/api/download-all/VALID123');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('application/zip');
+  });
 });

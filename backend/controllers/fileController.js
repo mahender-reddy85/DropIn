@@ -6,7 +6,6 @@ import { Readable } from 'stream';
 import bcrypt from 'bcryptjs';
 import https from 'https';
 import archiver from 'archiver';
-import path from 'path';
 
 // Clean up temporary local files after uploading or on error
 const cleanupLocalFiles = (files) => {
@@ -123,41 +122,30 @@ export const getFilesInfo = async (req, res) => {
 
 export const downloadFile = async (req, res) => {
   try {
-    console.log('Download request received:', req.params);
     const { code, filename } = req.params;
     
     const transfer = await Transfer.findOne({ code });
-    console.log('Transfer found:', transfer ? 'Yes' : 'No');
     
     if (!transfer) {
-      console.log('Transfer not found for code:', code);
       return res.status(404).json({ error: 'Transfer not found or expired' });
     }
     
     // Check download limit
     if (transfer.downloadsCount >= transfer.maxDownloads) {
-      console.log('Max downloads reached');
       return res.status(403).json({ error: 'Max downloads reached' });
     }
 
     const file = transfer.files.find(f => f.filename === filename);
-    console.log('File found:', file ? `Yes (${file.originalname})` : 'No');
     
     if (!file) {
-      console.log('File not found:', filename);
-      console.log('Available files:', transfer.files.map(f => f.filename));
       return res.status(404).json({ error: 'File not found' });
     }
     
     // Increment download count
     transfer.downloadsCount += 1;
     await transfer.save();
-    console.log('Download count incremented to:', transfer.downloadsCount);
     
     // Redirect to original Cloudinary URL
-    console.log('Redirecting to URL:', file.url);
-    
-    // Set headers before redirect
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Access-Control-Allow-Origin', '*');
     
@@ -171,14 +159,11 @@ export const downloadFile = async (req, res) => {
 
 export const downloadAllFiles = async (req, res) => {
   try {
-    console.log('Bulk download request received:', req.params);
     const { code } = req.params;
     
     const transfer = await Transfer.findOne({ code });
-    console.log('Transfer found:', transfer ? 'Yes' : 'No');
     
     if (!transfer) {
-      console.log('Transfer not found for code:', code);
       return res.status(404).json({ error: 'Transfer not found or expired' });
     }
     
@@ -196,7 +181,6 @@ export const downloadAllFiles = async (req, res) => {
     
     // Check download limit
     if (transfer.downloadsCount >= transfer.maxDownloads) {
-      console.log('Max downloads reached');
       return res.status(403).json({ error: 'Max downloads reached' });
     }
 
@@ -207,7 +191,6 @@ export const downloadAllFiles = async (req, res) => {
     // Increment download count for bulk download
     transfer.downloadsCount += 1;
     await transfer.save();
-    console.log('Download count incremented to:', transfer.downloadsCount);
 
     // Create ZIP archive
     const archive = archiver('zip', {
@@ -226,8 +209,6 @@ export const downloadAllFiles = async (req, res) => {
     // Add each file to the archive
     for (const file of transfer.files) {
       try {
-        console.log(`Adding file to ZIP: ${file.originalname}`);
-        
         let downloadUrl = file.url;
         
         // For PDFs, generate fresh URL to avoid access issues
@@ -239,7 +220,6 @@ export const downloadAllFiles = async (req, res) => {
               secure: true,
               type: 'upload'
             });
-            console.log(`Using fresh PDF URL: ${downloadUrl}`);
           } catch (urlError) {
             console.error(`URL generation failed for ${file.originalname}, using original:`, urlError);
             downloadUrl = file.url;
