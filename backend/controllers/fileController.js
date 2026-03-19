@@ -37,9 +37,17 @@ export const uploadFiles = async (req, res) => {
     // Upload each to cloudinary with consistent public access
     for (const file of req.files) {
       try {
+        // Determine resource type for better handling
+        let resourceType = 'auto';
+        if (file.mimetype.startsWith('video/') || file.originalname.toLowerCase().endsWith('.mp4')) {
+          resourceType = 'video';
+        } else if (file.mimetype.startsWith('audio/') || file.originalname.toLowerCase().endsWith('.mp3')) {
+          resourceType = 'video'; // Cloudinary treats audio as video
+        }
+
         // TEMPORARY FIX: Use simple upload without folder support for production stability
         const result = await cloudinary.uploader.upload(file.path, {
-          resource_type: 'auto',
+          resource_type: resourceType,
           folder: 'dropin',
           use_filename: true,
           original_filename: file.originalname,
@@ -164,11 +172,27 @@ export const downloadFile = async (req, res) => {
     transfer.downloadsCount += 1;
     await transfer.save();
 
-    // Redirect to original Cloudinary URL
+    // Generate proper Cloudinary URL with correct resource type
+    let resourceType = 'auto';
+    if (file.mimetype.startsWith('video/') || file.originalname.toLowerCase().endsWith('.mp4')) {
+      resourceType = 'video';
+    } else if (file.mimetype.startsWith('audio/') || file.originalname.toLowerCase().endsWith('.mp3')) {
+      resourceType = 'video'; // Cloudinary treats audio as video
+    } else if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
+      resourceType = 'raw';
+    }
+
+    const downloadUrl = cloudinary.url(file.public_id, {
+      resource_type: resourceType,
+      type: 'upload',
+      secure: true,
+      flags: 'attachment'
+    });
+
+    // Redirect to proper Cloudinary URL
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Access-Control-Allow-Origin', '*');
-
-    res.redirect(302, file.url);
+    res.redirect(302, downloadUrl);
 
   } catch (error) {
     console.error('Download error:', error);
@@ -233,15 +257,20 @@ export const downloadAllFiles = async (req, res) => {
       try {
         let resourceType = "auto";
 
-        // 🔥 Force correct type for PDFs
+        // 🔥 Force correct type for different file formats
         if (
           file.mimetype === "application/pdf" ||
           file.originalname.toLowerCase().endsWith(".pdf")
         ) {
           resourceType = "raw";
+        } else if (file.mimetype.startsWith("video/") || file.originalname.toLowerCase().endsWith(".mp4")) {
+          resourceType = "video";
+        } else if (file.mimetype.startsWith("audio/") || file.originalname.toLowerCase().endsWith(".mp3")) {
+          resourceType = "video"; // Cloudinary treats audio as video resource type
         }
 
         const downloadUrl = cloudinary.url(file.public_id, {
+          resource_type: resourceType,
           type: "upload",
           secure: true,
           flags: "attachment"
@@ -260,7 +289,12 @@ export const downloadAllFiles = async (req, res) => {
 
       } catch (err) {
         skippedFiles++;
-        console.error(`Error with ${file.originalname}:`, err.message);
+        console.error(`Error with ${file.originalname} (type: ${file.mimetype}):`, err.message);
+        console.error('File details:', {
+          public_id: file.public_id,
+          mimetype: file.mimetype,
+          resourceType: resourceType
+        });
       }
     }
     
