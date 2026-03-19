@@ -212,6 +212,8 @@ export const downloadAllFiles = async (req, res) => {
     // Add each file to archive
     for (const file of transfer.files) {
       try {
+        console.log(`Processing file: ${file.originalname}, mimetype: ${file.mimetype}`);
+        
         let resourceType = "auto";
 
         // 🔥 Force correct type for PDFs
@@ -220,6 +222,7 @@ export const downloadAllFiles = async (req, res) => {
           file.originalname.toLowerCase().endsWith(".pdf")
         ) {
           resourceType = "raw";
+          console.log(`PDF detected, using resource_type: raw`);
         }
 
         const downloadUrl = cloudinary.url(file.public_id, {
@@ -238,10 +241,13 @@ export const downloadAllFiles = async (req, res) => {
           maxRedirects: 5
         });
 
+        console.log(`Response status: ${response.status} for ${file.originalname}`);
+
         archive.append(response.data, { name: file.originalname });
 
       } catch (err) {
         console.error(`Error with ${file.originalname}:`, err.message);
+        console.error(`Full error:`, err);
       }
     }
 
