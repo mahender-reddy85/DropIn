@@ -213,20 +213,8 @@ export const downloadAllFiles = async (req, res) => {
       try {
         let downloadUrl = file.url;
 
-        // For PDFs, generate fresh URL to avoid access issues
-        if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
-          try {
-            downloadUrl = cloudinary.url(file.public_id, {
-              resource_type: 'raw',
-              format: 'pdf',
-              secure: true,
-              type: 'upload'
-            });
-          } catch (urlError) {
-            console.error(`URL generation failed for ${file.originalname}, using original:`, urlError);
-            downloadUrl = file.url;
-          }
-        }
+        // Force download behavior for ALL file types
+        downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
 
         // Download file from Cloudinary and add to ZIP
         const fileStream = await new Promise((resolve, reject) => {
