@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', function () {
     extendBtn: document.getElementById('extendBtn'),
     deleteBtn: document.getElementById('deleteBtn'),
     downloadStats: document.getElementById('downloadStats'),
+    downloadAllBtn: document.getElementById('downloadAllBtn'),
     dragDropOverlay: document.getElementById('dragDropOverlay')
   };
 
@@ -359,6 +360,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     elements.receiveBtn.addEventListener('click', receiveFiles);
+    if (elements.downloadAllBtn) {
+      elements.downloadAllBtn.addEventListener('click', downloadAllFiles);
+    }
     if (elements.scanQrBtn) {
       elements.scanQrBtn.addEventListener('click', openQrScanner);
     }
@@ -423,6 +427,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       displayDownloadFiles(data.files, code);
+      currentCode = code; // Store current code for bulk download
       showToast('Files ready for download!');
     } catch (error) {
       console.error('Receive error:', error);
@@ -467,18 +472,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <span class="file-name preview-trigger">${safeName}</span>
           <span class="file-size">${fileSize}</span>
         </div>
-        <a class="download-btn" aria-label="Download ${safeName}">
-          <svg viewBox="0 0 256 256" height="32" width="38" xmlns="http://www.w3.org/2000/svg">
-            <path d="M74.34 85.66a8 8 0 0 1 11.32-11.32L120 108.69V24a8 8 0 0 1 16 0v84.69l34.34-34.35a8 8 0 0 1 11.32 11.32l-48 48a8 8 0 0 1-11.32 0ZM240 136v64a16 16 0 0 1-16 16H32a16 16 0 0 1-16-16v-64a16 16 0 0 1 16-16h52.4a4 4 0 0 1 2.83 1.17L111 145a24 24 0 0 0 34 0l23.8-23.8a4 4 0 0 1 2.8-1.2H224a16 16 0 0 1 16 16m-40 32a12 12 0 1 0-12 12a12 12 0 0 0 12-12" fill="currentColor"></path>
-          </svg>
-        </a>
       `;
-
-      const downloadBtn = fileItem.querySelector('.download-btn');
-      downloadBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        downloadFile(code, file.filename, file.originalname);
-      });
 
       // Show preview trigger
       const trigger = fileItem.querySelector('.preview-trigger');
@@ -804,6 +798,39 @@ document.addEventListener('DOMContentLoaded', function () {
       elements.receiveInput.value = code;
       switchTab('receive');
       receiveFiles();
+    }
+  }
+
+  async function downloadAllFiles() {
+    if (!currentCode) {
+      showToast('No transfer code available');
+      return;
+    }
+
+    showToast('Preparing bulk download...');
+    
+    try {
+      const pwInput = document.getElementById('receivePassword');
+      const password = pwInput ? pwInput.value.trim() : '';
+      
+      // Construct URL with password if provided
+      let downloadUrl = `${API_BASE_URL}/api/download-all/${currentCode}`;
+      if (password) {
+        downloadUrl += `?password=${encodeURIComponent(password)}`;
+      }
+      
+      // Create temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast('Downloading all files...');
+    } catch (error) {
+      console.error('Bulk download error:', error);
+      showToast('Failed to download files', true);
     }
   }
 
