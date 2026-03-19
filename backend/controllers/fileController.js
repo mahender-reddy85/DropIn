@@ -27,36 +27,45 @@ export const uploadFiles = async (req, res) => {
 
     // Upload each to cloudinary with consistent public access
     for (const file of req.files) {
-      // Extract folder path from originalname if present (from webkitdirectory)
-      const folderPath = file.originalname.includes('/') ? 
-        file.originalname.substring(0, file.originalname.lastIndexOf('/')) : '';
-      const fileName = file.originalname.includes('/') ? 
-        file.originalname.substring(file.originalname.lastIndexOf('/') + 1) : 
-        file.originalname;
+      try {
+        // Extract folder path from originalname if present (from webkitdirectory)
+        const folderPath = file.originalname.includes('/') ? 
+          file.originalname.substring(0, file.originalname.lastIndexOf('/')) : '';
+        const fileName = file.originalname.includes('/') ? 
+          file.originalname.substring(file.originalname.lastIndexOf('/') + 1) : 
+          file.originalname;
 
-      // Create Cloudinary folder structure
-      const cloudinaryFolder = folderPath ? `dropin/${folderPath}` : 'dropin';
-      
-      const result = await cloudinary.uploader.upload(file.path, {
-        resource_type: 'auto',
-        folder: cloudinaryFolder,
-        use_filename: true,
-        original_filename: fileName,
-        type: 'upload', // 🔥 THIS IS KEY - ensures public delivery
-        overwrite: false,
-        flags: 'attachment'
-      });
+        // Sanitize folder path for Cloudinary (remove invalid characters)
+        const sanitizedPath = folderPath.replace(/[^a-zA-Z0-9_-]/g, '_');
+        
+        // Create Cloudinary folder structure
+        const cloudinaryFolder = sanitizedPath ? `dropin/${sanitizedPath}` : 'dropin';
+        
+        const result = await cloudinary.uploader.upload(file.path, {
+          resource_type: 'auto',
+          folder: cloudinaryFolder,
+          use_filename: true,
+          original_filename: fileName,
+          type: 'upload', // 🔥 THIS IS KEY - ensures public delivery
+          overwrite: false,
+          flags: 'attachment'
+        });
 
-      uploadedFiles.push({
-        filename: result.public_id,
-        originalname: file.originalname, // Keep full path for display
-        mimetype: file.mimetype,
-        size: file.size,
-        url: result.secure_url,
-        public_id: result.public_id,
-        uploadedAt: new Date(),
-        deleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
-      });
+        uploadedFiles.push({
+          filename: result.public_id,
+          originalname: file.originalname, // Keep full path for display
+          mimetype: file.mimetype,
+          size: file.size,
+          url: result.secure_url,
+          public_id: result.public_id,
+          uploadedAt: new Date(),
+          deleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+        });
+      } catch (uploadError) {
+        console.error('Error uploading file:', file.originalname, uploadError);
+        // Continue with other files instead of failing completely
+        continue;
+      }
     }
 
     // Cleanup local uploads
