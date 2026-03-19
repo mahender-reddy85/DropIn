@@ -309,9 +309,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  function generateUniqueCode() {
-    return Math.random().toString(36).substring(2, 7).toUpperCase();
-  }
+
 
   function closeCodeModal() {
     if (elements.codeModal) {
