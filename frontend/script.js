@@ -594,26 +594,53 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function onScanSuccess(decodedText, decodedResult) {
-
-    // Parse the URL to extract the code
+    console.log('QR scanned, raw text:', decodedText);
+    
     try {
-      const url = new URL(decodedText);
-      let code = url.searchParams.get('code');
-
-      if (!code && url.pathname.startsWith('/file/')) {
-        code = url.pathname.split('/file/')[1];
+      let code = null;
+      
+      // Handle different QR code formats
+      if (decodedText.includes('dropin-dn6i.onrender.com')) {
+        // Full URL format
+        const url = new URL(decodedText);
+        code = url.searchParams.get('code');
+        
+        if (!code && url.pathname.startsWith('/file/')) {
+          code = url.pathname.split('/file/')[1];
+        }
+      } else if (decodedText.includes('localhost:3001')) {
+        // Local development URL
+        const url = new URL(decodedText);
+        code = url.searchParams.get('code');
+        
+        if (!code && url.pathname.startsWith('/file/')) {
+          code = url.pathname.split('/file/')[1];
+        }
+      } else {
+        // Direct code format (just the code)
+        code = decodedText.trim();
       }
+
+      console.log('Extracted code:', code);
 
       if (code) {
         elements.receiveInput.value = code;
+        console.log('QR scanned, code:', code);
+        console.log('Receive input value set to:', elements.receiveInput.value);
         showToast('Scanned QR code: ' + code);
         closeQrScanner();
         switchTab('receive');
-        receiveFiles();
+        console.log('Tab switched to receive');
+        // Small delay to ensure tab switch is complete
+        setTimeout(() => {
+          console.log('About to call receiveFiles with code:', elements.receiveInput.value);
+          receiveFiles();
+        }, 100);
       } else {
         showToast('Invalid QR code format', true);
       }
     } catch (error) {
+      console.error('QR scan error:', error);
       showToast('Invalid QR code', true);
     }
 
