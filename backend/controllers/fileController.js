@@ -142,59 +142,15 @@ export const downloadFile = async (req, res) => {
     transfer.downloadsCount += 1;
     await transfer.save();
     
-    // Generate fresh URLs for all file types to ensure access
+    // Try direct redirect to original URL first
     try {
-      let resourceType = 'auto';
-      let format = null;
-      
-      // Determine resource type and format based on mimetype
-      if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
-        resourceType = 'raw';
-        format = 'pdf';
-      } else if (file.mimetype.startsWith('image/')) {
-        resourceType = 'image';
-        // Extract format from mimetype (e.g., 'image/jpeg' -> 'jpeg')
-        if (file.mimetype.includes('/')) {
-          format = file.mimetype.split('/')[1];
-        }
-      } else if (file.mimetype.startsWith('video/')) {
-        resourceType = 'video';
-        if (file.mimetype.includes('/')) {
-          format = file.mimetype.split('/')[1];
-        }
-      } else if (file.mimetype.startsWith('audio/')) {
-        resourceType = 'video'; // Cloudinary treats audio as video resource type
-        if (file.mimetype.includes('/')) {
-          format = file.mimetype.split('/')[1];
-        }
-      } else {
-        resourceType = 'raw'; // For documents and other files
-      }
-      
-      // Generate fresh public URL
-      const urlOptions = {
-        resource_type: resourceType,
-        secure: true,
-        type: 'upload'
-      };
-      
-      if (format) {
-        urlOptions.format = format;
-      }
-      
-      const freshUrl = cloudinary.url(file.public_id, urlOptions);
-      
-      console.log(`Generated fresh URL for ${file.mimetype}: ${freshUrl}`);
-      res.redirect(302, freshUrl);
+      console.log(`Redirecting to: ${file.url}`);
+      res.redirect(302, file.url);
       return;
-      
-    } catch (urlError) {
-      console.error('URL generation failed:', urlError);
+    } catch (redirectError) {
+      console.error('Redirect failed:', redirectError);
+      res.status(500).json({ error: 'Download failed' });
     }
-    
-    // Fallback to original URL
-    console.log(`Fallback to original URL: ${file.url}`);
-    res.redirect(302, file.url);
     
   } catch (error) {
     console.error('Download error:', error);
