@@ -214,6 +214,12 @@ export const downloadAllFiles = async (req, res) => {
       try {
         let downloadUrl = file.url;
 
+        // 🔥 CRITICAL FIX: handle PDFs correctly
+        if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
+          downloadUrl = downloadUrl.replace('/image/upload/', '/raw/upload/');
+        }
+
+        // force download
         downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
 
         console.log("Downloading:", downloadUrl);
