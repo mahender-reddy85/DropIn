@@ -395,13 +395,13 @@ document.addEventListener('DOMContentLoaded', function () {
           <span class="file-name">${safeName}</span>
           <span class="file-size">${fileSize}</span>
         </div>
-        <button class="download-btn" data-filename="${file.filename}" data-code="${code}" aria-label="Download ${safeName}">
+        <button class="download-btn" data-url="${file.url}" aria-label="Download ${safeName}">
           <i class="fas fa-download"></i>
         </button>
       `;
 
       const downloadBtn = fileItem.querySelector('.download-btn');
-      downloadBtn.addEventListener('click', () => downloadFile(code, file.filename, file.originalname));
+      downloadBtn.addEventListener('click', () => downloadFile(file.url, file.originalname));
 
       elements.downloadFileList.appendChild(fileItem);
     });
@@ -411,11 +411,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  function downloadFile(code, filename, originalname) {
-    const url = `${API_BASE_URL}/api/download/${code}/${filename}`;
+  function downloadFile(url, originalname) {
     const a = document.createElement('a');
     a.href = url;
     a.download = originalname;
+    a.target = '_blank';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
