@@ -333,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   async function receiveFiles() {
-    const code = elements.receiveInput ? elements.receiveInput.value.trim().toUpperCase() : '';
+    const code = elements.receiveInput ? elements.receiveInput.value.trim() : '';
 
     if (!code) {
       showToast('Please enter a code');
@@ -445,9 +445,14 @@ document.addEventListener('DOMContentLoaded', function () {
     // Parse the URL to extract the code
     try {
       const url = new URL(decodedText);
-      const code = url.searchParams.get('code');
+      let code = url.searchParams.get('code');
+      
+      if (!code && url.pathname.startsWith('/file/')) {
+        code = url.pathname.split('/file/')[1];
+      }
+      
       if (code) {
-        elements.receiveInput.value = code.toUpperCase();
+        elements.receiveInput.value = code;
         showToast('Scanned QR code: ' + code);
         // Navigate to the URL to trigger auto-fetch
         window.location.href = decodedText;
@@ -645,7 +650,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (code) {
-      elements.receiveInput.value = code.toUpperCase();
+      elements.receiveInput.value = code;
       switchTab('receive');
       receiveFiles();
     }
