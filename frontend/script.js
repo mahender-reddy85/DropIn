@@ -411,15 +411,26 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  function downloadFile(url, originalname) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = originalname;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    showToast('Download started!');
+  async function downloadFile(url, originalname) {
+    showToast('Starting download...');
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = originalname;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      showToast('Download complete!');
+    } catch (err) {
+      // Fallback: open in new tab if fetch fails (e.g. CORS)
+      window.open(url, '_blank');
+      showToast('Opened in new tab — save manually if needed.');
+    }
   }
 
   function openQrScanner() {

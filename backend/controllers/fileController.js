@@ -29,7 +29,8 @@ export const uploadFiles = async (req, res) => {
         resource_type: 'auto',
         folder: 'dropin',
         use_filename: true,
-        original_filename: file.originalname
+        original_filename: file.originalname,
+        access_control: [{ access_type: 'anonymous' }]
       });
 
       uploadedFiles.push({
