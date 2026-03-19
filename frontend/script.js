@@ -454,8 +454,9 @@ document.addEventListener('DOMContentLoaded', function () {
       if (code) {
         elements.receiveInput.value = code;
         showToast('Scanned QR code: ' + code);
-        // Navigate to the URL to trigger auto-fetch
-        window.location.href = decodedText;
+        closeQrScanner();
+        switchTab('receive');
+        receiveFiles();
       } else {
         showToast('Invalid QR code format', true);
       }
