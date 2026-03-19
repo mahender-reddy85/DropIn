@@ -465,11 +465,12 @@ document.addEventListener('DOMContentLoaded', function () {
       const fileSize = formatFileSize(file.size);
       const fileIcon = getFileIcon(file.mimetype);
       const safeName = escapeHtml(file.originalname);
+      const displayName = truncateFileName(file.originalname, 10);
 
       fileItem.innerHTML = `
         <div class="file-info">
           <span class="file-icon">${fileIcon}</span>
-          <span class="file-name preview-trigger">${safeName}</span>
+          <span class="file-name preview-trigger" title="${safeName}">${displayName}</span>
           <span class="file-size">${fileSize}</span>
         </div>
       `;
@@ -626,6 +627,19 @@ document.addEventListener('DOMContentLoaded', function () {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  function truncateFileName(filename, maxLength = 10) {
+    if (filename.length <= maxLength) return filename;
+    
+    // Get file extension
+    const lastDotIndex = filename.lastIndexOf('.');
+    const extension = lastDotIndex > -1 ? filename.substring(lastDotIndex) : '';
+    const nameWithoutExt = lastDotIndex > -1 ? filename.substring(0, lastDotIndex) : filename;
+    
+    // Truncate name part and add extension back
+    const truncatedName = nameWithoutExt.substring(0, maxLength) + '...' + extension;
+    return truncatedName;
   }
 
   // Toast notification function
