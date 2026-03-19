@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import fs from 'fs';
 import { Readable } from 'stream';
 import bcrypt from 'bcryptjs';
+import https from 'https';
 
 // Clean up temporary local files after uploading or on error
 const cleanupLocalFiles = (files) => {
@@ -122,48 +123,47 @@ export const downloadFile = async (req, res) => {
   try {
     const { code, filename } = req.params;
     const transfer = await Transfer.findOne({ code });
-    if (!transfer) {
-      return res.status(404).json({ error: 'Transfer not found or expired' });
-    }
+    if (!transfer) return res.status(404).json({ error: 'Transfer not found or expired' });
     
     // Check abuse limit
     if (transfer.downloadsCount >= transfer.maxDownloads) {
-      return res.status(403).json({ error: 'Max downloads reached for this transfer' });
+      return res.status(403).json({ error: 'Max downloads reached' });
     }
 
     const file = transfer.files.find(f => f.filename === filename);
-    if (!file) {
-      return res.status(404).json({ error: 'File not found' });
-    }
+    if (!file) return res.status(404).json({ error: 'File not found' });
     
-    // Increment download count
+    // Increment download count (Fixed: Only once)
     transfer.downloadsCount += 1;
     await transfer.save();
     
-    // Increment download count
-    transfer.downloadsCount += 1;
-    await transfer.save();
+    // Authenticated HTTPS Proxy request to Cloudinary
+    // Using Basic Auth headers (API_KEY:API_SECRET) to guarantee access to any file
+    const auth = Buffer.from(`${process.env.CLOUDINARY_API_KEY}:${process.env.CLOUDINARY_API_SECRET}`).toString('base64');
     
-    // Identify if the file should be treated as an 'image', 'video', or 'raw' file in Cloudinary
-    let resType = 'raw';
-    if (file.mimetype) {
-      if (file.mimetype.startsWith('image/')) resType = 'image';
-      if (file.mimetype.startsWith('video/')) resType = 'video';
-    }
+    https.get(file.url, { headers: { 'Authorization': `Basic ${auth}` } }, (cloudRes) => {
+      if (cloudRes.statusCode >= 400) {
+        console.error(`Auth Proxy Fail: ${cloudRes.statusCode} for ${file.url}`);
+        return res.status(cloudRes.statusCode).json({ error: `Cloud Proxy Failed: ${cloudRes.statusCode}` });
+      }
 
-    // Generate a secure, Cloudinary URL with the attachment flag to force download
-    const signedUrl = cloudinary.url(file.public_id, {
-      resource_type: resType,
-      flags: 'attachment',
-      attachment: encodeURIComponent(file.originalname),
-      secure: true
+      // Force 'application/octet-stream' for PDFs and docs to guarantee a download window
+      const isMedia = file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'));
+      const forcedMime = isMedia ? file.mimetype : 'application/octet-stream';
+
+      res.setHeader('Content-Type', forcedMime);
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalname)}"`);
+      res.setHeader('Content-Length', cloudRes.headers['content-length'] || file.size);
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      cloudRes.pipe(res);
+    }).on('error', (err) => {
+      console.error('SECURE PROXY ERROR:', err);
+      res.status(500).json({ error: 'Secure proxy connection failed' });
     });
-
-    console.log(`Generated Download URL for ${file.originalname}: ${signedUrl}`);
-    res.redirect(signedUrl);
   } catch (error) {
     console.error('SERVER DOWNLOAD ERROR:', error);
-    res.status(500).json({ error: `Downloader Error: ${error.message}` });
+    res.status(500).json({ error: `Internal Downloader Error: ${error.message}` });
   }
 };
 
