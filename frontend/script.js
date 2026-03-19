@@ -269,7 +269,12 @@ document.addEventListener('DOMContentLoaded', function () {
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        let errMsg = 'Upload failed';
+        try {
+          const errData = await response.json();
+          errMsg = errData.error || errMsg;
+        } catch (e) {}
+        throw new Error(errMsg);
       }
 
       const data = await response.json();
