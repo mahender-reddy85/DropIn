@@ -22,6 +22,12 @@ export const uploadFiles = async (req, res) => {
       return res.status(400).json({ error: 'No files uploaded' });
     }
 
+    console.log('Processing upload request with files:', req.files.map(f => ({
+      originalname: f.originalname,
+      mimetype: f.mimetype,
+      size: f.size
+    })));
+
     // Validate expiration input
     let hours = 1;
     if (req.body.expiration) {
@@ -37,24 +43,40 @@ export const uploadFiles = async (req, res) => {
     // Upload each to cloudinary with consistent public access
     for (const file of req.files) {
       try {
-        // Determine resource type for better handling
+        // Use auto resource type for most files, only override for specific cases
         let resourceType = 'auto';
-        if (file.mimetype.startsWith('video/') || file.originalname.toLowerCase().endsWith('.mp4')) {
+        
+        // Only force specific resource types if auto-detection might fail
+        if (file.mimetype.startsWith('video/')) {
           resourceType = 'video';
-        } else if (file.mimetype.startsWith('audio/') || file.originalname.toLowerCase().endsWith('.mp3')) {
+        } else if (file.mimetype.startsWith('audio/')) {
           resourceType = 'video'; // Cloudinary treats audio as video
         }
 
-        // TEMPORARY FIX: Use simple upload without folder support for production stability
-        const result = await cloudinary.uploader.upload(file.path, {
-          resource_type: resourceType,
-          folder: 'dropin',
-          use_filename: true,
-          original_filename: file.originalname,
-          type: 'upload', // 🔥 THIS IS KEY - ensures public delivery
-          overwrite: false,
-          flags: 'attachment'
-        });
+        let result;
+        try {
+          result = await cloudinary.uploader.upload(file.path, {
+            resource_type: resourceType,
+            folder: 'dropin',
+            use_filename: true,
+            original_filename: file.originalname,
+            type: 'upload',
+            overwrite: false,
+            flags: 'attachment'
+          });
+        } catch (resourceError) {
+          // Fallback to auto if specific resource type fails
+          console.warn('Resource type upload failed, falling back to auto:', resourceError.message);
+          result = await cloudinary.uploader.upload(file.path, {
+            resource_type: 'auto',
+            folder: 'dropin',
+            use_filename: true,
+            original_filename: file.originalname,
+            type: 'upload',
+            overwrite: false,
+            flags: 'attachment'
+          });
+        }
 
         uploadedFiles.push({
           filename: result.public_id,
@@ -66,8 +88,15 @@ export const uploadFiles = async (req, res) => {
           uploadedAt: new Date(),
           deleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
         });
+        console.log(`Successfully uploaded: ${file.originalname}`);
       } catch (uploadError) {
         console.error('Error uploading file:', file.originalname, uploadError);
+        console.error('File details:', {
+          mimetype: file.mimetype,
+          size: file.size,
+          path: file.path,
+          resourceType: resourceType
+        });
         // Continue with other files instead of failing completely
         continue;
       }
@@ -77,6 +106,7 @@ export const uploadFiles = async (req, res) => {
     cleanupLocalFiles(req.files);
 
     // Check if any files were successfully uploaded
+    console.log(`Upload summary: ${uploadedFiles.length} successful, ${req.files.length - uploadedFiles.length} failed`);
     if (uploadedFiles.length === 0) {
       return res.status(400).json({ error: 'No files could be uploaded successfully' });
     }
