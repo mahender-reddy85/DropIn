@@ -81,11 +81,12 @@ export const uploadFiles = async (req, res) => {
 
         let result;
         try {
-          // Attempt direct path upload
+          // Attempt direct path upload (efficient)
           result = await cloudinary.uploader.upload(file.path, { resource_type: 'auto' });
         } catch (pathError) {
-          console.error('Direct path upload failed, trying buffer fallback:', pathError.message);
-          const fileBuffer = fs.readFileSync(file.path);
+          console.error('Direct path upload failed, using streaming fallback for efficiency:', pathError.message);
+          
+          // Memory-efficient streaming fallback
           result = await new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
               { resource_type: 'auto' },
@@ -94,7 +95,9 @@ export const uploadFiles = async (req, res) => {
                 else resolve(uploadResult);
               }
             );
-            uploadStream.end(fileBuffer);
+            
+            // Pipe file directly from disk to Cloudinary without loading into RAM
+            fs.createReadStream(file.path).pipe(uploadStream);
           });
         }
 
@@ -226,12 +229,18 @@ export const downloadAllFiles = async (req, res) => {
       return res.status(404).json({ error: 'No files to download' });
     }
 
-    // Increment download count and mark for short-term expiration
-    transfer.downloadsCount += 1;
-    transfer.isDownloaded = true;
-    // Set to expire in 1 minute (buffer for current archive stream)
-    transfer.expiresAt = new Date(Date.now() + 60000); 
-    await transfer.save();
+    // Atomic update to prevent race conditions during concurrent downloads
+    await Transfer.updateOne(
+      { _id: transfer._id },
+      { 
+        $inc: { downloadsCount: 1 }, 
+        $set: { 
+          isDownloaded: true, 
+          // Set to expire in 1 minute (buffer for current archive stream)
+          expiresAt: new Date(Date.now() + 60000) 
+        } 
+      }
+    );
 
     // Create ZIP archive
     const archive = archiver('zip', {

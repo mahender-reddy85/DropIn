@@ -4,7 +4,7 @@ import upload from '../middleware/upload.js';
 
 const router = express.Router();
 
-router.post('/upload', upload.array('files'), uploadFiles);
+router.post('/upload', upload, uploadFiles);
 router.get('/info/:code', getFilesInfo);
 router.get('/download/:code', downloadAllFiles);
 router.delete('/transfers/:code', deleteTransfer);
