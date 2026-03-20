@@ -17,13 +17,31 @@ app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors({ origin: '*' }));
 
-// Rate limiting
+// General API limiter
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 50, // limit each IP to 50 requests per windowMs
-  message: { error: 'Too many requests, please try again later.' }
+  windowMs: 15 * 60 * 1000, 
+  max: 100, 
+  message: { error: 'Too many general API requests, please try again in 15 minutes.' }
 });
 app.use('/api', limiter);
+
+// Specific limiter for uploads (stricter)
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 uploads per window
+  message: { error: 'Upload limit reached (5 per 15 mins). Please wait.' }
+});
+
+// Specific limiter for info/downloads (to prevent brute forcing codes)
+const downloadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 20, 
+  message: { error: 'Download limit reached. Please try again later.' }
+});
+
+app.use('/api/upload', uploadLimiter);
+app.use('/api/download', downloadLimiter);
+app.use('/api/info', downloadLimiter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
