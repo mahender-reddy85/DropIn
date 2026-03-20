@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
   async function handleDrop(e) {
     const items = e.dataTransfer.items;
     const files = [];
-    
+
     // We use a queue to traverse the tree asynchronously
     const traverse = async (item, path = "") => {
       if (item.isFile) {
@@ -232,25 +232,36 @@ document.addEventListener('DOMContentLoaded', function () {
         files.push(file);
       } else if (item.isDirectory) {
         const dirReader = item.createReader();
-        const entries = await new Promise((resolve) => {
-           dirReader.readEntries(resolve);
-        });
-        for (const entry of entries) {
-          await traverse(entry, path + item.name + "/");
-        }
+        
+        // readEntries must be called repeatedly until it's empty
+        const readAllEntries = async () => {
+          const entries = await new Promise((resolve) => {
+            dirReader.readEntries(resolve);
+          });
+          if (entries.length > 0) {
+            for (const entry of entries) {
+              await traverse(entry, path + item.name + "/");
+            }
+            // Recursively read the next batch of entries
+            await readAllEntries();
+          }
+        };
+        await readAllEntries();
       }
     };
 
     if (items) {
       for (const item of items) {
-        const entry = item.webkitGetAsEntry();
-        if (entry) {
-          await traverse(entry);
+        if (item.kind === 'file') {
+          const entry = item.webkitGetAsEntry();
+          if (entry) {
+            await traverse(entry);
+          }
         }
       }
     } else {
       // Fallback for older browsers
-      handleFiles({ target: { files: e.dataTransfer.files } });
+      handleFiles(Array.from(e.dataTransfer.files));
       return;
     }
 
@@ -258,7 +269,18 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function handleFiles(e) {
-    const files = Array.isArray(e) ? e : Array.from(e.target.files || []);
+    let files = Array.isArray(e) ? e : Array.from(e.target.files || []);
+
+    // Filter out folder entries (usually 0 bytes with no extension or mime)
+    // and ensure we only add items with actual data or valid filenames
+    files = files.filter(f => {
+      if (f.size > 0) return true;
+      // If it has a dot in filename, we assume it's a real file (even if empty)
+      if (f.name && f.name.includes('.')) return true;
+      // If none of the above, it's likely a directory stub from the OS
+      return false;
+    });
+
     if (files.length > 0) {
       selectedFiles = [...selectedFiles, ...files];
       displayFiles();
@@ -329,6 +351,24 @@ document.addEventListener('DOMContentLoaded', function () {
   function updateGenerateButton() {
     if (elements.generateCodeBtn) {
       elements.generateCodeBtn.disabled = selectedFiles.length === 0;
+      
+      // Update total size display if we had one, or create it
+      let sizeInfo = document.getElementById('totalSizeInfo');
+      if (selectedFiles.length > 0) {
+        if (!sizeInfo) {
+          sizeInfo = document.createElement('p');
+          sizeInfo.id = 'totalSizeInfo';
+          sizeInfo.style.textAlign = 'right';
+          sizeInfo.style.fontSize = '0.85rem';
+          sizeInfo.style.color = 'var(--text-secondary)';
+          sizeInfo.style.marginTop = '0.5rem';
+          elements.fileList.parentNode.appendChild(sizeInfo);
+        }
+        const totalBytes = selectedFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+        sizeInfo.textContent = `Total Size: ${formatFileSize(totalBytes)} (${selectedFiles.length} files)`;
+      } else if (sizeInfo) {
+        sizeInfo.remove();
+      }
     }
   }
 
