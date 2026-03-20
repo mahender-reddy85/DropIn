@@ -702,25 +702,22 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       let code = null;
 
-      // Handle different QR code formats
-      if (decodedText.includes('dropin-dn6i.onrender.com')) {
-        // Full URL format
-        const url = new URL(decodedText);
-        code = url.searchParams.get('code');
-
-        if (!code && url.pathname.startsWith('/file/')) {
-          code = url.pathname.split('/file/')[1];
+      // Robust URL parsing for any domain
+      try {
+        if (decodedText.startsWith('http')) {
+          const url = new URL(decodedText);
+          code = url.searchParams.get('code');
+          
+          // Fallback if code is in the path
+          if (!code && url.pathname.includes('/file/')) {
+            code = url.pathname.split('/file/')[1]?.split('/')[0];
+          }
+        } else {
+          // Direct code format
+          code = decodedText.trim();
         }
-      } else if (decodedText.includes('localhost:3001')) {
-        // Local development URL
-        const url = new URL(decodedText);
-        code = url.searchParams.get('code');
-
-        if (!code && url.pathname.startsWith('/file/')) {
-          code = url.pathname.split('/file/')[1];
-        }
-      } else {
-        // Direct code format (just the code)
+      } catch (e) {
+        // Fallback for non-url strings
         code = decodedText.trim();
       }
 
