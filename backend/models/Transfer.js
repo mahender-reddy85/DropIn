@@ -20,7 +20,7 @@ const transferSchema = new mongoose.Schema({
   files: [fileSchema],
   expiresAt: { type: Date, default: () => new Date(Date.now() + 24 * 60 * 60 * 1000), index: true }, // 24 hours
   password: { type: String },
-  maxDownloads: { type: Number, default: 10 },
+  maxDownloads: { type: Number, default: 100 },
   downloadsCount: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
