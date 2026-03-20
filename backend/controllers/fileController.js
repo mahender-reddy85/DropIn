@@ -69,8 +69,11 @@ export const uploadFiles = async (req, res) => {
       hours = expHours;
     }
 
+    // Extract paths if provided (for folder structure)
+    const paths = Array.isArray(req.body.paths) ? req.body.paths : [req.body.paths || ''];
+
     // Use Promise.allSettled for parallel uploads - MUCH FASTER
-    const uploadPromises = req.files.map(async (file) => {
+    const uploadPromises = req.files.map(async (file, index) => {
       try {
         if (!fs.existsSync(file.path)) {
           console.error('File does not exist:', file.path);
@@ -106,6 +109,7 @@ export const uploadFiles = async (req, res) => {
           url: result.secure_url,
           public_id: result.public_id,
           resourceType: result.resource_type,
+          path: paths[index] || '', // Save folder path
           uploadedAt: new Date(),
           deleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         };
@@ -267,7 +271,7 @@ export const downloadAllFiles = async (req, res) => {
           timeout: 30000 // 30 second timeout
         });
 
-        archive.append(response.data, { name: file.originalname });
+        archive.append(response.data, { name: file.path || file.originalname });
         processedFiles++;
 
       } catch (err) {

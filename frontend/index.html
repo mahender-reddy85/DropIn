@@ -34,9 +34,10 @@
         <div class="upload-icon">
           <i class="fas fa-cloud-upload-alt"></i>
         </div>
-        <h3>Drop files here or <span class="browse-link">browse</span> to upload</h3>
-        <p class="max-size-text">Maximum file size: 100MB</p>
+        <h3>Drop files/folders here or <span class="browse-link">files</span> / <span class="folder-link">folder</span></h3>
+        <p class="max-size-text">Maximum file size: 100MB per file</p>
         <input type="file" id="fileInput" multiple hidden />
+        <input type="file" id="folderInput" webkitdirectory directory multiple hidden />
       </div>
 
       <div class="file-controls">

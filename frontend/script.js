@@ -9,7 +9,9 @@ document.addEventListener('DOMContentLoaded', function () {
     receiveContent: document.getElementById('receiveContent'),
     dropArea: document.getElementById('dropArea'),
     browseBtn: document.querySelector('.browse-link'),
+    folderBtn: document.querySelector('.folder-link'),
     fileInput: document.getElementById('fileInput'),
+    folderInput: document.getElementById('folderInput'),
     fileList: document.getElementById('fileList'),
     clearBtn: document.getElementById('clearBtn'),
     generateCodeBtn: document.getElementById('generateCodeBtn'),
@@ -155,6 +157,13 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
+    if (elements.folderBtn) {
+      elements.folderBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        elements.folderInput.click();
+      });
+    }
+
     // Make the entire drop zone clickable
     elements.dropArea.addEventListener('click', () => {
       elements.fileInput.click();
@@ -208,9 +217,44 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.dropArea.classList.remove('highlight');
   }
 
-  function handleDrop(e) {
-    const files = e.dataTransfer.files;
-    handleFiles({ target: { files } });
+  async function handleDrop(e) {
+    const items = e.dataTransfer.items;
+    const files = [];
+    
+    // We use a queue to traverse the tree asynchronously
+    const traverse = async (item, path = "") => {
+      if (item.isFile) {
+        const file = await new Promise((resolve) => item.file(resolve));
+        // Manually set relative path since it's not present on dropped files
+        Object.defineProperty(file, 'webkitRelativePath', {
+          value: path + file.name
+        });
+        files.push(file);
+      } else if (item.isDirectory) {
+        const dirReader = item.createReader();
+        const entries = await new Promise((resolve) => {
+           dirReader.readEntries(resolve);
+        });
+        for (const entry of entries) {
+          await traverse(entry, path + item.name + "/");
+        }
+      }
+    };
+
+    if (items) {
+      for (const item of items) {
+        const entry = item.webkitGetAsEntry();
+        if (entry) {
+          await traverse(entry);
+        }
+      }
+    } else {
+      // Fallback for older browsers
+      handleFiles({ target: { files: e.dataTransfer.files } });
+      return;
+    }
+
+    handleFiles(files);
   }
 
   function handleFiles(e) {
@@ -243,13 +287,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const fileIcon = getFileIcon(file.type);
 
     const fileName = file.name || file.originalname || 'Unknown';
-    const safeName = escapeHtml(fileName);
+    // Show path if it exists to indicate folder structure
+    const displayPath = file.webkitRelativePath || fileName;
+    const safeName = escapeHtml(displayPath);
 
     fileItem.innerHTML = `
       <div class="file-info">
         <span class="file-icon">${fileIcon}</span>
         <div class="file-name-container">
-          <span class="file-name">${safeName}</span>
+          <span class="file-name" title="${escapeHtml(fileName)}">${safeName}</span>
         </div>
         <span class="file-size">${fileSize}</span>
       </div>
@@ -315,6 +361,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const formData = new FormData();
     selectedFiles.forEach(file => {
       formData.append('files', file);
+      formData.append('paths', file.webkitRelativePath || '');
     });
 
     const pwInput = document.getElementById('uploadPassword');

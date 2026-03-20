@@ -6,6 +6,7 @@ const fileSchema = new mongoose.Schema({
   mimetype: { type: String, required: true },
   size: { type: Number, required: true },
   url: { type: String, required: true },
+  path: { type: String, default: '' }, // Store relative path for folder structure
   public_id: { type: String, required: true },
   resourceType: { type: String, default: 'raw' }, // Not required to support legacy records
   uploadedAt: { type: Date, default: Date.now },
