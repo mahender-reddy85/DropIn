@@ -20,19 +20,21 @@ const cleanupLocalFiles = (files) => {
   });
 };
 
-// Helper to determine Cloudinary resource type
+// Helper to determine Cloudinary resource type for legacy records or before DB save
 const getResourceType = (mimetype, originalname) => {
   const name = (originalname || '').toLowerCase();
-  if (mimetype.startsWith('video/') || name.endsWith('.mp4') || name.endsWith('.mov') || name.endsWith('.avi')) {
+  const mime = (mimetype || '').toLowerCase();
+  if (mime.startsWith('video/') || name.endsWith('.mp4') || name.endsWith('.mov') || name.endsWith('.avi')) {
     return 'video';
   }
-  if (mimetype.startsWith('audio/') || name.endsWith('.mp3') || name.endsWith('.wav')) {
+  if (mime.startsWith('audio/') || name.endsWith('.mp3') || name.endsWith('.wav')) {
     return 'video'; // Cloudinary treats audio as video resource type
   }
-  if (mimetype === 'application/pdf' || name.endsWith('.pdf')) {
-    return 'raw';
+  if (mime.startsWith('image/')) {
+    return 'image';
   }
-  return 'auto';
+  // PDFs, Zips, and others go as raw
+  return 'raw';
 };
 
 export const uploadFiles = async (req, res) => {
@@ -112,6 +114,7 @@ export const uploadFiles = async (req, res) => {
           size: file.size,
           url: result.secure_url,
           public_id: result.public_id,
+          resourceType: result.resource_type,
           uploadedAt: new Date(),
           deleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
         });
@@ -234,7 +237,7 @@ export const downloadFile = async (req, res) => {
     transfer.downloadsCount += 1;
     await transfer.save();
 
-    const resourceType = getResourceType(file.mimetype, file.originalname);
+    const resourceType = file.resourceType || getResourceType(file.mimetype, file.originalname);
 
     const downloadUrl = cloudinary.url(file.public_id, {
       resource_type: resourceType,
@@ -309,7 +312,7 @@ export const downloadAllFiles = async (req, res) => {
     
     for (const file of transfer.files) {
       try {
-        const resourceType = getResourceType(file.mimetype, file.originalname);
+        const resourceType = file.resourceType || getResourceType(file.mimetype, file.originalname);
 
         const downloadUrl = cloudinary.url(file.public_id, {
           resource_type: resourceType,
@@ -424,16 +427,13 @@ export const deleteTransfer = async (req, res) => {
     // Verify password if provided on deletion or just allow deletion if they know the code?
     // User requested "allow user to: delete files, extend expiry". Without user auth, they need the password or we just trust the person who knows the code. 
 
-    // Delete files from Cloudinary
-    if (transfer.files && transfer.files.length > 0) {
       await Promise.allSettled(transfer.files.map(file => {
         if (file.public_id) {
-          const resType = getResourceType(file.mimetype, file.originalname);
+          const resType = file.resourceType || getResourceType(file.mimetype, file.originalname);
           return cloudinary.uploader.destroy(file.public_id, { resource_type: resType });
         }
         return Promise.resolve();
       }));
-    }
 
     await Transfer.deleteOne({ _id: transfer._id });
     res.json({ success: true, message: 'Transfer deleted successfully' });
