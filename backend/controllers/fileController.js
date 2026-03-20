@@ -69,11 +69,8 @@ export const uploadFiles = async (req, res) => {
       hours = expHours;
     }
 
-    // Extract paths if provided (for folder structure)
-    const paths = Array.isArray(req.body.paths) ? req.body.paths : [req.body.paths || ''];
-
     // Use Promise.allSettled for parallel uploads - MUCH FASTER
-    const uploadPromises = req.files.map(async (file, index) => {
+    const uploadPromises = req.files.map(async (file) => {
       try {
         if (!fs.existsSync(file.path)) {
           console.error('File does not exist:', file.path);
@@ -109,7 +106,6 @@ export const uploadFiles = async (req, res) => {
           url: result.secure_url,
           public_id: result.public_id,
           resourceType: result.resource_type,
-          path: paths[index] || '', // Save folder path
           uploadedAt: new Date(),
           deleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         };
@@ -190,6 +186,7 @@ export const getFilesInfo = async (req, res) => {
       expiresAt: transfer.expiresAt,
       requiresPassword: !!transfer.password,
       downloadsCount: transfer.downloadsCount,
+      isDownloaded: transfer.isDownloaded,
       files: transfer.files.map(f => ({
         filename: f.filename,
         originalname: f.originalname,
@@ -229,8 +226,11 @@ export const downloadAllFiles = async (req, res) => {
       return res.status(404).json({ error: 'No files to download' });
     }
 
-    // Increment download count for bulk download
+    // Increment download count and mark for short-term expiration
     transfer.downloadsCount += 1;
+    transfer.isDownloaded = true;
+    // Set to expire in 1 minute (buffer for current archive stream)
+    transfer.expiresAt = new Date(Date.now() + 60000); 
     await transfer.save();
 
     // Create ZIP archive
@@ -271,7 +271,7 @@ export const downloadAllFiles = async (req, res) => {
           timeout: 30000 // 30 second timeout
         });
 
-        archive.append(response.data, { name: file.path || file.originalname });
+        archive.append(response.data, { name: file.originalname });
         processedFiles++;
 
       } catch (err) {

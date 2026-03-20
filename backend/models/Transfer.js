@@ -6,7 +6,6 @@ const fileSchema = new mongoose.Schema({
   mimetype: { type: String, required: true },
   size: { type: Number, required: true },
   url: { type: String, required: true },
-  path: { type: String, default: '' }, // Store relative path for folder structure
   public_id: { type: String, required: true },
   resourceType: { type: String, default: 'raw' }, // Not required to support legacy records
   uploadedAt: { type: Date, default: Date.now },
@@ -23,6 +22,7 @@ const transferSchema = new mongoose.Schema({
   password: { type: String },
   maxDownloads: { type: Number, default: 100 },
   downloadsCount: { type: Number, default: 0 },
+  isDownloaded: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 

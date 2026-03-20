@@ -9,9 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
     receiveContent: document.getElementById('receiveContent'),
     dropArea: document.getElementById('dropArea'),
     browseBtn: document.querySelector('.browse-link'),
-    folderBtn: document.querySelector('.folder-link'),
     fileInput: document.getElementById('fileInput'),
-    folderInput: document.getElementById('folderInput'),
     fileList: document.getElementById('fileList'),
     clearBtn: document.getElementById('clearBtn'),
     generateCodeBtn: document.getElementById('generateCodeBtn'),
@@ -36,7 +34,11 @@ document.addEventListener('DOMContentLoaded', function () {
     dragDropOverlay: document.getElementById('dragDropOverlay'),
     uploadModal: document.getElementById('uploadModal'),
     progressBar: document.getElementById('progressBar'),
-    uploadStatus: document.getElementById('uploadStatus')
+    uploadStatus: document.getElementById('uploadStatus'),
+    totalSizeDisplay: document.getElementById('totalSizeDisplay'),
+    fileCount: document.getElementById('fileCount'),
+    totalBytes: document.getElementById('totalBytes'),
+    transferStatusDisplay: document.getElementById('transferStatusDisplay')
   };
 
   // State management
@@ -157,13 +159,6 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
-    if (elements.folderBtn) {
-      elements.folderBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        elements.folderInput.click();
-      });
-    }
-
     // Make the entire drop zone clickable
     elements.dropArea.addEventListener('click', () => {
       elements.fileInput.click();
@@ -217,70 +212,13 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.dropArea.classList.remove('highlight');
   }
 
-  async function handleDrop(e) {
-    const items = e.dataTransfer.items;
-    const files = [];
-
-    // We use a queue to traverse the tree asynchronously
-    const traverse = async (item, path = "") => {
-      if (item.isFile) {
-        const file = await new Promise((resolve) => item.file(resolve));
-        // Manually set relative path since it's not present on dropped files
-        Object.defineProperty(file, 'webkitRelativePath', {
-          value: path + file.name
-        });
-        files.push(file);
-      } else if (item.isDirectory) {
-        const dirReader = item.createReader();
-        
-        // readEntries must be called repeatedly until it's empty
-        const readAllEntries = async () => {
-          const entries = await new Promise((resolve) => {
-            dirReader.readEntries(resolve);
-          });
-          if (entries.length > 0) {
-            for (const entry of entries) {
-              await traverse(entry, path + item.name + "/");
-            }
-            // Recursively read the next batch of entries
-            await readAllEntries();
-          }
-        };
-        await readAllEntries();
-      }
-    };
-
-    if (items) {
-      for (const item of items) {
-        if (item.kind === 'file') {
-          const entry = item.webkitGetAsEntry();
-          if (entry) {
-            await traverse(entry);
-          }
-        }
-      }
-    } else {
-      // Fallback for older browsers
-      handleFiles(Array.from(e.dataTransfer.files));
-      return;
-    }
-
-    handleFiles(files);
+  function handleDrop(e) {
+    const files = e.dataTransfer.files;
+    handleFiles({ target: { files } });
   }
 
   function handleFiles(e) {
-    let files = Array.isArray(e) ? e : Array.from(e.target.files || []);
-
-    // Filter out folder entries (usually 0 bytes with no extension or mime)
-    // and ensure we only add items with actual data or valid filenames
-    files = files.filter(f => {
-      if (f.size > 0) return true;
-      // If it has a dot in filename, we assume it's a real file (even if empty)
-      if (f.name && f.name.includes('.')) return true;
-      // If none of the above, it's likely a directory stub from the OS
-      return false;
-    });
-
+    const files = Array.isArray(e) ? e : Array.from(e.target.files || []);
     if (files.length > 0) {
       selectedFiles = [...selectedFiles, ...files];
       displayFiles();
@@ -299,6 +237,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     updateClearButton();
     updateGenerateButton();
+    updateTotalSizeDisplay();
+  }
+
+  function updateTotalSizeDisplay() {
+    if (!elements.totalSizeDisplay || !elements.fileCount || !elements.totalBytes) return;
+
+    if (selectedFiles.length === 0) {
+      elements.totalSizeDisplay.style.display = 'none';
+      return;
+    }
+
+    const totalBytesCount = selectedFiles.reduce((acc, file) => acc + (file.size || 0), 0);
+    elements.fileCount.textContent = selectedFiles.length;
+    elements.totalBytes.textContent = formatFileSize(totalBytesCount);
+    elements.totalSizeDisplay.style.display = 'flex';
   }
 
   function createFileItem(file, index) {
@@ -309,15 +262,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const fileIcon = getFileIcon(file.type);
 
     const fileName = file.name || file.originalname || 'Unknown';
-    // Show path if it exists to indicate folder structure
-    const displayPath = file.webkitRelativePath || fileName;
-    const safeName = escapeHtml(displayPath);
+    const safeName = escapeHtml(fileName);
 
     fileItem.innerHTML = `
       <div class="file-info">
         <span class="file-icon">${fileIcon}</span>
         <div class="file-name-container">
-          <span class="file-name" title="${escapeHtml(fileName)}">${safeName}</span>
+          <span class="file-name">${safeName}</span>
         </div>
         <span class="file-size">${fileSize}</span>
       </div>
@@ -351,24 +302,6 @@ document.addEventListener('DOMContentLoaded', function () {
   function updateGenerateButton() {
     if (elements.generateCodeBtn) {
       elements.generateCodeBtn.disabled = selectedFiles.length === 0;
-      
-      // Update total size display if we had one, or create it
-      let sizeInfo = document.getElementById('totalSizeInfo');
-      if (selectedFiles.length > 0) {
-        if (!sizeInfo) {
-          sizeInfo = document.createElement('p');
-          sizeInfo.id = 'totalSizeInfo';
-          sizeInfo.style.textAlign = 'right';
-          sizeInfo.style.fontSize = '0.85rem';
-          sizeInfo.style.color = 'var(--text-secondary)';
-          sizeInfo.style.marginTop = '0.5rem';
-          elements.fileList.parentNode.appendChild(sizeInfo);
-        }
-        const totalBytes = selectedFiles.reduce((acc, f) => acc + (f.size || 0), 0);
-        sizeInfo.textContent = `Total Size: ${formatFileSize(totalBytes)} (${selectedFiles.length} files)`;
-      } else if (sizeInfo) {
-        sizeInfo.remove();
-      }
     }
   }
 
@@ -401,7 +334,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const formData = new FormData();
     selectedFiles.forEach(file => {
       formData.append('files', file);
-      formData.append('paths', file.webkitRelativePath || '');
     });
 
     const pwInput = document.getElementById('uploadPassword');
@@ -491,6 +423,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
       if (elements.codeModal) {
         elements.codeModal.style.display = 'block';
+        // Reset status
+        if (elements.transferStatusDisplay) {
+           elements.transferStatusDisplay.classList.remove('done');
+           elements.transferStatusDisplay.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Waiting for receiver...';
+        }
+        startTransferStatusPolling(currentCode);
       }
 
       showToast('Files uploaded successfully!');
@@ -501,9 +439,53 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  let statusPollingInterval = null;
+
+  function startTransferStatusPolling(code) {
+    stopTransferStatusPolling(); // Clear existing if any
+    
+    statusPollingInterval = setInterval(async () => {
+      if (!code) return;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/info/${code}`);
+        if (!response.ok) {
+           // If 404 or 410, it likely expired already (successfully downloaded and deleted)
+           if (response.status === 404 || response.status === 410) {
+              setTransferDone();
+              stopTransferStatusPolling();
+           }
+           return;
+        }
+        const data = await response.json();
+        if (data.isDownloaded) {
+           setTransferDone();
+           stopTransferStatusPolling();
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 5000); // Poll every 5 seconds
+  }
+
+  function stopTransferStatusPolling() {
+    if (statusPollingInterval) {
+      clearInterval(statusPollingInterval);
+      statusPollingInterval = null;
+    }
+  }
+
+  function setTransferDone() {
+    if (elements.transferStatusDisplay) {
+      elements.transferStatusDisplay.classList.add('done');
+      elements.transferStatusDisplay.innerHTML = '<i class="fas fa-check-circle"></i> Files Downloaded! Transfer Complete.';
+      showToast('🎉 Your receiver has downloaded the files! The link is now expiring.');
+    }
+  }
+
 
 
   function closeCodeModal() {
+    stopTransferStatusPolling();
     if (elements.codeModal) {
       elements.codeModal.style.display = 'none';
     }
