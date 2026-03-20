@@ -6,9 +6,8 @@ const router = express.Router();
 
 router.post('/upload', upload.array('files'), uploadFiles);
 router.get('/info/:code', getFilesInfo);
-router.post('/info/:code', getFilesInfo); // Allow POST for password body check
 router.get('/download/:code/:filename', downloadFile);
-router.get('/download-all/:code', downloadAllFiles);
+router.get('/download/:code', downloadAllFiles);
 router.delete('/file/:id', deleteFile);
 router.delete('/transfers/:code', deleteTransfer);
 router.put('/transfers/:code/extend', extendExpiry);

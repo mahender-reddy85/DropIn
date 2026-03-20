@@ -397,14 +397,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     try {
       const pwInput = document.getElementById('receivePassword');
-      const reqBody = (pwInput && pwInput.value.trim()) ? { password: pwInput.value.trim() } : {};
+      const password = (pwInput && pwInput.value.trim()) ? pwInput.value.trim() : '';
 
-      const response = await fetch(`${API_BASE_URL}/api/info/${code}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(reqBody)
+      let url = `${API_BASE_URL}/api/info/${code}`;
+      if (password) {
+        url += `?password=${encodeURIComponent(password)}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET'
       });
 
       if (!response.ok) {
@@ -867,7 +868,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const password = pwInput ? pwInput.value.trim() : '';
 
       // Construct URL with password if provided
-      let downloadUrl = `${API_BASE_URL}/api/download-all/${currentCode}`;
+      let downloadUrl = `${API_BASE_URL}/api/download/${currentCode}`;
       if (password) {
         downloadUrl += `?password=${encodeURIComponent(password)}`;
       }
