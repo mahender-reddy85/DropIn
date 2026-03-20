@@ -7,7 +7,7 @@ const fileSchema = new mongoose.Schema({
   size: { type: Number, required: true },
   url: { type: String, required: true },
   public_id: { type: String, required: true },
-  resourceType: { type: String, required: true },
+  resourceType: { type: String, default: 'raw' }, // Not required to support legacy records
   uploadedAt: { type: Date, default: Date.now },
   deleteAt: { 
     type: Date, 
