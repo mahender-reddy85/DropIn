@@ -59,6 +59,22 @@ document.addEventListener('DOMContentLoaded', function () {
       localStorage.setItem('theme', newTheme);
       updateThemeIcon(newTheme);
     });
+
+    // Check for code in URL on load
+    checkUrlParams();
+  }
+
+  function checkUrlParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+      elements.receiveInput.value = code;
+      switchTab('receive');
+      // Tiny delay to ensure UI transition
+      setTimeout(() => {
+        receiveFiles();
+      }, 300);
+    }
   }
 
   function updateThemeIcon(theme) {
@@ -323,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // Generate and display QR code
       if (elements.qrCodeContainer) {
         elements.qrCodeContainer.innerHTML = '';
-        const fileUrl = window.location.origin + '/file/' + currentCode;
+        const fileUrl = window.location.origin + '/?code=' + currentCode;
         new QRCode(elements.qrCodeContainer, {
           text: fileUrl,
           width: 128,
@@ -470,7 +486,19 @@ document.addEventListener('DOMContentLoaded', function () {
           <span class="file-name preview-trigger" title="${safeName}">${displayName}</span>
           <span class="file-size">${fileSize}</span>
         </div>
+        <div class="file-actions">
+           <button class="download-file-btn" data-filename="${file.filename}" title="Download ${safeName}">
+             <i class="fas fa-download"></i>
+           </button>
+        </div>
       `;
+
+      // Individual download event
+      const downloadBtn = fileItem.querySelector('.download-file-btn');
+      downloadBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        downloadFile(code, file.filename, file.originalname);
+      });
 
       // Show preview trigger
       const trigger = fileItem.querySelector('.preview-trigger');
@@ -742,7 +770,7 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.copyLinkBtn.addEventListener('click', () => {
       const code = elements.codeDisplay.textContent;
       if (!code) return;
-      const url = window.location.origin + '/file/' + code;
+      const url = window.location.origin + '/?code=' + code;
       navigator.clipboard.writeText(url).then(() => {
         showToast('Link copied to clipboard!');
       }).catch(() => {
@@ -753,11 +781,12 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.shareBtn.addEventListener('click', () => {
       const code = elements.codeDisplay.textContent;
       if (!code) return;
-      const url = window.location.origin + '/file/' + code;
+      const url = window.location.origin + '/?code=' + code;
       if (navigator.share) {
         navigator.share({
           title: 'DropIn Files',
           text: 'Check out these files: ' + url,
+          url: url
         }).catch((error) => {
           showToast('Error sharing: ' + error, true);
         });
@@ -769,7 +798,7 @@ document.addEventListener('DOMContentLoaded', function () {
     elements.emailBtn.addEventListener('click', () => {
       const code = elements.codeDisplay.textContent;
       if (!code) return;
-      const url = window.location.origin + '/file/' + code;
+      const url = window.location.origin + '/?code=' + code;
       const subject = encodeURIComponent('DropIn File Transfer');
       const body = encodeURIComponent('Check out these files: ' + url);
 

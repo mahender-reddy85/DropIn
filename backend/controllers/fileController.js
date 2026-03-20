@@ -8,12 +8,31 @@ import archiver from 'archiver';
 
 // Clean up temporary local files after uploading or on error
 const cleanupLocalFiles = (files) => {
-  if (!files) return;
+  if (!files || !Array.isArray(files)) return;
   files.forEach(file => {
     if (file.path && fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
+      try {
+        fs.unlinkSync(file.path);
+      } catch (err) {
+        console.error('Failed to delete local file:', file.path, err.message);
+      }
     }
   });
+};
+
+// Helper to determine Cloudinary resource type
+const getResourceType = (mimetype, originalname) => {
+  const name = (originalname || '').toLowerCase();
+  if (mimetype.startsWith('video/') || name.endsWith('.mp4') || name.endsWith('.mov') || name.endsWith('.avi')) {
+    return 'video';
+  }
+  if (mimetype.startsWith('audio/') || name.endsWith('.mp3') || name.endsWith('.wav')) {
+    return 'video'; // Cloudinary treats audio as video resource type
+  }
+  if (mimetype === 'application/pdf' || name.endsWith('.pdf')) {
+    return 'raw';
+  }
+  return 'auto';
 };
 
 export const uploadFiles = async (req, res) => {
@@ -215,15 +234,7 @@ export const downloadFile = async (req, res) => {
     transfer.downloadsCount += 1;
     await transfer.save();
 
-    // Generate proper Cloudinary URL with correct resource type
-    let resourceType = 'auto';
-    if (file.mimetype.startsWith('video/') || file.originalname.toLowerCase().endsWith('.mp4')) {
-      resourceType = 'video';
-    } else if (file.mimetype.startsWith('audio/') || file.originalname.toLowerCase().endsWith('.mp3')) {
-      resourceType = 'video'; // Cloudinary treats audio as video
-    } else if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
-      resourceType = 'raw';
-    }
+    const resourceType = getResourceType(file.mimetype, file.originalname);
 
     const downloadUrl = cloudinary.url(file.public_id, {
       resource_type: resourceType,
@@ -298,19 +309,7 @@ export const downloadAllFiles = async (req, res) => {
     
     for (const file of transfer.files) {
       try {
-        let resourceType = "auto";
-
-        // 🔥 Force correct type for different file formats
-        if (
-          file.mimetype === "application/pdf" ||
-          file.originalname.toLowerCase().endsWith(".pdf")
-        ) {
-          resourceType = "raw";
-        } else if (file.mimetype.startsWith("video/") || file.originalname.toLowerCase().endsWith(".mp4")) {
-          resourceType = "video";
-        } else if (file.mimetype.startsWith("audio/") || file.originalname.toLowerCase().endsWith(".mp3")) {
-          resourceType = "video"; // Cloudinary treats audio as video resource type
-        }
+        const resourceType = getResourceType(file.mimetype, file.originalname);
 
         const downloadUrl = cloudinary.url(file.public_id, {
           resource_type: resourceType,
@@ -378,8 +377,9 @@ export const deleteFile = async (req, res) => {
     
     // Delete from Cloudinary
     try {
+      const resourceType = getResourceType(file.mimetype, file.originalname);
       await cloudinary.uploader.destroy(file.public_id, {
-        resource_type: 'auto',
+        resource_type: resourceType,
         type: 'upload'
       });
     } catch (cloudinaryError) {
@@ -426,11 +426,13 @@ export const deleteTransfer = async (req, res) => {
 
     // Delete files from Cloudinary
     if (transfer.files && transfer.files.length > 0) {
-      for (const file of transfer.files) {
+      await Promise.allSettled(transfer.files.map(file => {
         if (file.public_id) {
-          await cloudinary.uploader.destroy(file.public_id);
+          const resType = getResourceType(file.mimetype, file.originalname);
+          return cloudinary.uploader.destroy(file.public_id, { resource_type: resType });
         }
-      }
+        return Promise.resolve();
+      }));
     }
 
     await Transfer.deleteOne({ _id: transfer._id });

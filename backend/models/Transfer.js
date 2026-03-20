@@ -26,7 +26,5 @@ const transferSchema = new mongoose.Schema({
 
 // TTL index for automatic deletion after expiry
 transferSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-// TTL index for individual file deletion after 7 days
-fileSchema.index({ deleteAt: 1 }, { expireAfterSeconds: 0 });
 
 export default mongoose.model('Transfer', transferSchema);
