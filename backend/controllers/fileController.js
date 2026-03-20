@@ -69,31 +69,22 @@ export const uploadFiles = async (req, res) => {
       hours = expHours;
     }
 
-    const uploadedFiles = [];
-
-    // Upload each to cloudinary with consistent public access
-    for (const file of req.files) {
-      let resourceType = 'auto'; // Declare here to be accessible in catch block
-      
+    // Use Promise.allSettled for parallel uploads - MUCH FASTER
+    const uploadPromises = req.files.map(async (file) => {
       try {
-        // Check if file exists before uploading
         if (!fs.existsSync(file.path)) {
           console.error('File does not exist:', file.path);
-          continue;
+          return null;
         }
-        
-        console.log('Attempting to upload file:', file.path);
+
+        console.log('Attempting parallel upload for:', file.path);
 
         let result;
         try {
-          // Try file path upload first
-          result = await cloudinary.uploader.upload(file.path, {
-            resource_type: 'auto'
-          });
+          // Attempt direct path upload
+          result = await cloudinary.uploader.upload(file.path, { resource_type: 'auto' });
         } catch (pathError) {
-          console.error('File path upload failed, trying buffer upload:', pathError.message);
-          
-          // Fallback to buffer upload
+          console.error('Direct path upload failed, trying buffer fallback:', pathError.message);
           const fileBuffer = fs.readFileSync(file.path);
           result = await new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
@@ -107,7 +98,7 @@ export const uploadFiles = async (req, res) => {
           });
         }
 
-        uploadedFiles.push({
+        return {
           filename: result.public_id,
           originalname: file.originalname,
           mimetype: file.mimetype,
@@ -116,25 +107,21 @@ export const uploadFiles = async (req, res) => {
           public_id: result.public_id,
           resourceType: result.resource_type,
           uploadedAt: new Date(),
-          deleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
-        });
-        console.log(`Successfully uploaded: ${file.originalname}`);
-      } catch (uploadError) {
-        console.error('Error uploading file:', file.originalname, uploadError);
-        console.error('File details:', {
-          mimetype: file.mimetype,
-          size: file.size,
-          path: file.path,
-          resourceType: resourceType
-        });
-        console.error('Cloudinary error details:', {
-          message: uploadError.message,
-          name: uploadError.name,
-          http_code: uploadError.http_code
-        });
-        // Continue with other files instead of failing completely
-        continue;
+          deleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        };
+      } catch (err) {
+        console.error(`Failed to upload ${file.originalname}:`, err.message);
+        return null;
       }
+    });
+
+    const results = await Promise.all(uploadPromises);
+    const uploadedFiles = results.filter(f => f !== null);
+
+    // Immediate error response if everything failed
+    if (uploadedFiles.length === 0) {
+      cleanupLocalFiles(req.files);
+      return res.status(400).json({ error: 'No files could be uploaded successfully' });
     }
 
     // Cleanup local uploads

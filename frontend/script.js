@@ -31,7 +31,10 @@ document.addEventListener('DOMContentLoaded', function () {
     extendBtn: document.getElementById('extendBtn'),
     deleteBtn: document.getElementById('deleteBtn'),
     downloadAllBtn: document.getElementById('downloadAllBtn'),
-    dragDropOverlay: document.getElementById('dragDropOverlay')
+    dragDropOverlay: document.getElementById('dragDropOverlay'),
+    uploadModal: document.getElementById('uploadModal'),
+    progressBar: document.getElementById('progressBar'),
+    uploadStatus: document.getElementById('uploadStatus')
   };
 
   // State management
@@ -302,7 +305,12 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
-    showToast('Uploading files...');
+    // Show progress modal
+    if (elements.uploadModal) {
+      elements.uploadModal.style.display = 'block';
+      if (elements.progressBar) elements.progressBar.style.width = '0%';
+      if (elements.uploadStatus) elements.uploadStatus.textContent = 'Preparing files for upload...';
+    }
 
     const formData = new FormData();
     selectedFiles.forEach(file => {
@@ -315,21 +323,65 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/upload`, {
-        method: 'POST',
-        body: formData
+      // Use XHR for progress tracking
+      const xhr = new XMLHttpRequest();
+      
+      const uploadPromise = new Promise((resolve, reject) => {
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percent = (e.loaded / e.total) * 100;
+            if (elements.progressBar) {
+              // We reserve 20% for server-side processing
+              const visualPercent = percent * 0.8;
+              elements.progressBar.style.width = visualPercent + '%';
+              if (elements.uploadStatus) {
+                elements.uploadStatus.textContent = `Uploading: ${Math.round(percent)}%`;
+              }
+            }
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(JSON.parse(xhr.responseText));
+          } else {
+            let errMsg = 'Upload failed';
+            try {
+              const errData = JSON.parse(xhr.responseText);
+              errMsg = errData.error || errMsg;
+            } catch (e) {}
+            reject(new Error(errMsg));
+          }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
+        
+        xhr.open('POST', `${API_BASE_URL}/api/upload`);
+        xhr.send(formData);
       });
 
-      if (!response.ok) {
-        let errMsg = 'Upload failed';
-        try {
-          const errData = await response.json();
-          errMsg = errData.error || errMsg;
-        } catch (e) { }
-        throw new Error(errMsg);
-      }
+      // Switch status once files are on the server
+      const checkServerStatus = setInterval(() => {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+            clearInterval(checkServerStatus);
+            return;
+        }
+        if (xhr.upload && elements.progressBar) {
+           const currentWidth = parseFloat(elements.progressBar.style.width);
+           if (currentWidth >= 80 && currentWidth < 98) {
+              if (elements.uploadStatus) elements.uploadStatus.textContent = 'Server is processing and securing your cloud storage...';
+              elements.progressBar.style.width = (currentWidth + 0.5) + '%';
+           }
+        }
+      }, 500);
 
-      const data = await response.json();
+      const data = await uploadPromise;
+      clearInterval(checkServerStatus);
+      
+      // Complete the progress
+      if (elements.progressBar) elements.progressBar.style.width = '100%';
+      setTimeout(() => { if (elements.uploadModal) elements.uploadModal.style.display = 'none'; }, 300);
+
       currentCode = data.code;
 
       if (elements.codeDisplay) {
@@ -357,7 +409,8 @@ document.addEventListener('DOMContentLoaded', function () {
       showToast('Files uploaded successfully!');
     } catch (error) {
       console.error('Upload error:', error);
-      showToast('Failed to upload files. Please try again.', true);
+      if (elements.uploadModal) elements.uploadModal.style.display = 'none';
+      showToast(error.message || 'Failed to upload files. Please try again.', true);
     }
   }
 
