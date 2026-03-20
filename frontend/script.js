@@ -836,6 +836,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (code) {
       elements.receiveInput.value = code;
+      
+      // Clean up URL so refresh goes to homepage
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
       switchTab('receive');
       receiveFiles();
     }
