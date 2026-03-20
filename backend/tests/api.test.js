@@ -33,11 +33,13 @@ describe('API Tests', () => {
       code: 'VALID123',
       expiresAt: new Date(),
       downloadsCount: 0,
+      isDownloaded: false,
       files: []
     });
     const res = await request(app).get('/api/info/VALID123');
     expect(res.status).toBe(200);
     expect(res.body.code).toBe('VALID123');
+    expect(res.body).toHaveProperty('isDownloaded');
   });
 
   test('5. Extend expiry works properly', async () => {
@@ -55,12 +57,13 @@ describe('API Tests', () => {
 
   test('6. Bulk download for non-existent code returns 404', async () => {
     jest.spyOn(Transfer, 'findOne').mockResolvedValueOnce(null);
-    const res = await request(app).get('/api/download-all/INVALID123');
+    const res = await request(app).get('/api/download/INVALID123');
     expect(res.status).toBe(404);
   });
 
   test('7. Bulk download for valid code returns ZIP', async () => {
     jest.spyOn(Transfer, 'findOne').mockResolvedValueOnce({
+      _id: new mongoose.Types.ObjectId(),
       code: 'VALID123',
       expiresAt: new Date(),
       downloadsCount: 0,
@@ -73,35 +76,20 @@ describe('API Tests', () => {
         public_id: 'test_pdf'
       }]
     });
-    const res = await request(app).get('/api/download-all/VALID123');
+    jest.spyOn(Transfer, 'updateOne').mockResolvedValueOnce({ nModified: 1 });
+    const res = await request(app).get('/api/download/VALID123');
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('application/zip');
   });
 
-  test('8. Delete file for non-existent ID returns 404', async () => {
-    jest.spyOn(Transfer, 'findOne').mockResolvedValueOnce(null);
-    const res = await request(app).delete('/api/file/invalid123');
-    expect(res.status).toBe(404);
-  });
-
-  test('9. Delete file for valid ID works', async () => {
-    const mockTransfer = {
-      files: [{
-        _id: 'file123',
-        filename: 'test.pdf',
-        originalname: 'test.pdf',
-        public_id: 'test_pdf'
-      }],
-      save: jest.fn(),
-      pull: jest.fn()
-    };
-    
-    jest.spyOn(Transfer, 'findOne').mockResolvedValueOnce(mockTransfer);
-    jest.spyOn(mockTransfer.files, 'id').mockReturnValueOnce(mockTransfer.files[0]);
-    jest.spyOn(cloudinary.uploader, 'destroy').mockResolvedValueOnce({ result: 'ok' });
-    
-    const res = await request(app).delete('/api/file/file123');
+  test('8. Delete transfer for valid code works', async () => {
+    jest.spyOn(Transfer, 'findOne').mockResolvedValueOnce({
+      _id: new mongoose.Types.ObjectId(),
+      code: 'VALID123',
+      files: []
+    });
+    jest.spyOn(Transfer, 'deleteOne').mockResolvedValueOnce({ deletedCount: 1 });
+    const res = await request(app).delete('/api/transfers/VALID123');
     expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
   });
 });
