@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const fileSize = formatFileSize(file.size);
     const fileIcon = getFileIcon(file.type);
-    
+
     const fileName = file.name || file.originalname || 'Unknown';
     const safeName = escapeHtml(fileName);
 
@@ -325,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       // Use XHR for progress tracking
       const xhr = new XMLHttpRequest();
-      
+
       const uploadPromise = new Promise((resolve, reject) => {
         xhr.upload.addEventListener('progress', (e) => {
           if (e.lengthComputable) {
@@ -349,13 +349,13 @@ document.addEventListener('DOMContentLoaded', function () {
             try {
               const errData = JSON.parse(xhr.responseText);
               errMsg = errData.error || errMsg;
-            } catch (e) {}
+            } catch (e) { }
             reject(new Error(errMsg));
           }
         });
 
         xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
-        
+
         xhr.open('POST', `${API_BASE_URL}/api/upload`);
         xhr.send(formData);
       });
@@ -363,21 +363,21 @@ document.addEventListener('DOMContentLoaded', function () {
       // Switch status once files are on the server
       const checkServerStatus = setInterval(() => {
         if (xhr.readyState === XMLHttpRequest.DONE) {
-            clearInterval(checkServerStatus);
-            return;
+          clearInterval(checkServerStatus);
+          return;
         }
         if (xhr.upload && elements.progressBar) {
-           const currentWidth = parseFloat(elements.progressBar.style.width);
-           if (currentWidth >= 80 && currentWidth < 98) {
-              if (elements.uploadStatus) elements.uploadStatus.textContent = 'Server is processing and securing your cloud storage...';
-              elements.progressBar.style.width = (currentWidth + 0.5) + '%';
-           }
+          const currentWidth = parseFloat(elements.progressBar.style.width);
+          if (currentWidth >= 80 && currentWidth < 98) {
+            if (elements.uploadStatus) elements.uploadStatus.textContent = 'Server is processing and securing your cloud storage...';
+            elements.progressBar.style.width = (currentWidth + 0.5) + '%';
+          }
         }
       }, 500);
 
       const data = await uploadPromise;
       clearInterval(checkServerStatus);
-      
+
       // Complete the progress
       if (elements.progressBar) elements.progressBar.style.width = '100%';
       setTimeout(() => { if (elements.uploadModal) elements.uploadModal.style.display = 'none'; }, 300);
@@ -629,16 +629,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function onScanSuccess(decodedText, decodedResult) {
     console.log('QR scanned, raw text:', decodedText);
-    
+
     try {
       let code = null;
-      
+
       // Handle different QR code formats
       if (decodedText.includes('dropin-dn6i.onrender.com')) {
         // Full URL format
         const url = new URL(decodedText);
         code = url.searchParams.get('code');
-        
+
         if (!code && url.pathname.startsWith('/file/')) {
           code = url.pathname.split('/file/')[1];
         }
@@ -646,7 +646,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Local development URL
         const url = new URL(decodedText);
         code = url.searchParams.get('code');
-        
+
         if (!code && url.pathname.startsWith('/file/')) {
           code = url.pathname.split('/file/')[1];
         }
@@ -889,10 +889,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (code) {
       elements.receiveInput.value = code;
-      
+
       // Clean up URL so refresh goes to homepage
       window.history.replaceState({}, document.title, window.location.pathname);
-      
+
       switchTab('receive');
       receiveFiles();
     }

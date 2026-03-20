@@ -9,8 +9,8 @@ const fileSchema = new mongoose.Schema({
   public_id: { type: String, required: true },
   resourceType: { type: String, default: 'raw' }, // Not required to support legacy records
   uploadedAt: { type: Date, default: Date.now },
-  deleteAt: { 
-    type: Date, 
+  deleteAt: {
+    type: Date,
     default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
   }
 });

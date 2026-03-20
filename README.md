@@ -6,10 +6,11 @@ A robust, secure file transfer application built with a separate Node.js backend
 
 - **Real Persistence**: Uses MongoDB Atlas with TTL indices for automatic expiry.
 - **Robust Storage**: Integrates with Cloudinary for fast and reliable cloud file storage.
-- **Improved Security**: Rate limiting, MongoDB sanitization, XSS cleanup, and Helmet protection.
-- **Cryptographically Secure IDs**: Utilizes `nanoid` (8 characters default) for brute-force resistance.
-- **File Management**: Users can delete their transfers manually or extend the expiry time.
-- **Download Limits**: Prevents abuse by limiting maximum downloads.
+- **Improved Security**: Rate limiting, MongoDB sanitization, password protection, and Helmet protection.
+- **Cryptographically Secure IDs**: Utilizes high-entropy `nanoid` (8 characters) for brute-force resistance.
+- **Parallel Processing**: High-speed parallel file uploads to Cloudinary for massive performance gains.
+- **Live Progress UI**: Real-time progress bar for both browser upload and server-side processing.
+- **Flexible Management**: Users can delete transfers instantly or extend the expiry time.
 
 ---
 
@@ -32,10 +33,11 @@ graph TD;
 
 1. **Anti-Brute Force**: Transfer codes are 8-character high-entropy strings generated using `nanoid`.
 2. **Rate Limiting**: IP-based rate limiting via `express-rate-limit` (max 50 requests per minute).
-3. **Data Sanitization**: All inputs are sanitized using `express-mongo-sanitize` to prevent NoSQL injection, and `xss-clean` for cross-site scripting prevention.
-4. **Automated Expiry**: A MongoDB TTL index automatically wipes the document upon hitting `expiresAt`, ensuring zero stale data.
+3. **Data Sanitization**: All inputs are sanitized using `express-mongo-sanitize` to prevent NoSQL injection.
+4. **Automated Expiry**: A MongoDB TTL index automatically wipes the document upon hitting `expiresAt`.
 5. **Secure Headers**: `helmet` manages HTTP headers, blocking common vulnerabilities.
-6. **Robust Validation**: Files are strictly verified against size constraints before saving, with all file formats supported.
+6. **Robust Validation**: Files are strictly verified against size and type constraints.
+7. **Password Protection**: Optional end-to-end password requirement for access.
 
 ---
 
@@ -67,30 +69,22 @@ The backend should be deployed to a Node.js environment like Render or Railway. 
 
 ### 1. Upload Files
 - **POST** `/api/upload`
-- **Body**: `multipart/form-data` with multiple `files` (Max 100MB per file).
-- **Description**: Uploads files to Cloudinary, creates a MongoDB entry, and returns a secure transfer code.
+- **Body**: `multipart/form-data` with multiple `files` (Max 100MB per file) and optional `password`.
+- **Description**: Uploads files to Cloudinary in parallel, creates a MongoDB entry, and returns a secure transfer code.
 
 ### 2. Get Transfer Info
 - **GET** `/api/info/:code`
-- **Description**: Retrieves file metadata for downloading, including file properties and expiry info.
+- **Description**: Retrieves metadata for the transfer (files, expiry, password requirement). Pass `?password=...` for protected transfers.
 
-### 3. Download File
-- **GET** `/api/download/:code/:filename`
-- **Description**: Verifies transfer limit. Increments the download counter and redirects to the secure Cloudinary attachment URL.
+### 3. Download Files (Archive)
+- **GET** `/api/download/:code`
+- **Description**: Generates a ZIP archive of all files in the transfer. Increments the global download counter. Pass `?password=...` for protected transfers.
 
-### 4. Download All Files (Bulk)
-- **GET** `/api/download-all/:code`
-- **Description**: Downloads all files in a transfer as a ZIP archive. Increments download counter once for the bulk download.
-
-### 5. Delete Transfer
+### 4. Delete Transfer
 - **DELETE** `/api/transfers/:code`
 - **Description**: Deletes the Cloudinary files and the MongoDB record instantly.
 
-### 6. Delete Individual File
-- **DELETE** `/api/file/:id`
-- **Description**: Deletes a specific file from Cloudinary and removes it from the transfer. If no files remain, the entire transfer is deleted.
-
-### 7. Extend Expiry
+### 5. Extend Expiry
 - **PUT** `/api/transfers/:code/extend`
 - **Description**: Extends existing expiry length by an additional 24 hours.
 

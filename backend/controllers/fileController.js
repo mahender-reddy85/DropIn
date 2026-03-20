@@ -246,7 +246,7 @@ export const downloadAllFiles = async (req, res) => {
     // Add each file to archive
     let processedFiles = 0;
     let skippedFiles = 0;
-    
+
     for (const file of transfer.files) {
       let resourceType = 'raw'; // Default for PDFs, documents, zips
       try {
@@ -275,7 +275,7 @@ export const downloadAllFiles = async (req, res) => {
         console.error(`Error with ${file.originalname}:`, err.message);
       }
     }
-    
+
     archive.finalize();
 
     archive.on('error', (err) => {
