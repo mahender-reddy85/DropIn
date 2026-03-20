@@ -264,34 +264,6 @@ h1 i {
   box-shadow: var(--shadow);
 }
 
-.file-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-left: auto;
-}
-
-.download-file-btn {
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  padding: 0.5rem 0.75rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.download-file-btn:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-}
-
-.download-file-btn:active {
-  transform: translateY(0);
-}
-
 .file-info {
   display: flex;
   align-items: center;

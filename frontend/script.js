@@ -486,19 +486,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <span class="file-name preview-trigger" title="${safeName}">${displayName}</span>
           <span class="file-size">${fileSize}</span>
         </div>
-        <div class="file-actions">
-           <button class="download-file-btn" data-filename="${file.filename}" title="Download ${safeName}">
-             <i class="fas fa-download"></i>
-           </button>
-        </div>
       `;
-
-      // Individual download event
-      const downloadBtn = fileItem.querySelector('.download-file-btn');
-      downloadBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        downloadFile(code, file.filename, file.originalname);
-      });
 
       // Show preview trigger
       const trigger = fileItem.querySelector('.preview-trigger');
@@ -523,7 +511,6 @@ document.addEventListener('DOMContentLoaded', function () {
               <span class="preview-big-icon">${fileIcon}</span>
               <span class="preview-file-name">${safeName}</span>
               <span class="preview-file-size">${fileSize}</span>
-              <span style="font-size: 0.7rem; color: var(--primary-color); margin-top: 5px;">(Tap download icon to save)</span>
             </div>`;
         }
         previewEl.classList.add('visible');

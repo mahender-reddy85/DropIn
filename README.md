@@ -7,7 +7,7 @@ A robust, secure file transfer application built with a separate Node.js backend
 - **Real Persistence**: Uses MongoDB Atlas with TTL indices for automatic expiry.
 - **Robust Storage**: Integrates with Cloudinary for fast and reliable cloud file storage.
 - **Improved Security**: Rate limiting, MongoDB sanitization, XSS cleanup, and Helmet protection.
-- **Cryptographically Secure IDs**: Utilizes `nanoid` (12 characters minimum) for brute-force resistance.
+- **Cryptographically Secure IDs**: Utilizes `nanoid` (8 characters default) for brute-force resistance.
 - **File Management**: Users can delete their transfers manually or extend the expiry time.
 - **Download Limits**: Prevents abuse by limiting maximum downloads.
 
@@ -30,12 +30,12 @@ graph TD;
 
 ## Comprehensive Security Notes
 
-1. **Anti-Brute Force**: Transfer codes are 12-character high-entropy strings generated using `nanoid`.
+1. **Anti-Brute Force**: Transfer codes are 8-character high-entropy strings generated using `nanoid`.
 2. **Rate Limiting**: IP-based rate limiting via `express-rate-limit` (max 50 requests per minute).
 3. **Data Sanitization**: All inputs are sanitized using `express-mongo-sanitize` to prevent NoSQL injection, and `xss-clean` for cross-site scripting prevention.
 4. **Automated Expiry**: A MongoDB TTL index automatically wipes the document upon hitting `expiresAt`, ensuring zero stale data.
 5. **Secure Headers**: `helmet` manages HTTP headers, blocking common vulnerabilities.
-6. **Robust Validation**: Files are strictly verified against mimetypes and size constraints before saving.
+6. **Robust Validation**: Files are strictly verified against size constraints before saving, with all file formats supported.
 
 ---
 

@@ -143,7 +143,7 @@ export const uploadFiles = async (req, res) => {
       return res.status(400).json({ error: 'No files could be uploaded successfully' });
     }
 
-    const code = nanoid(12); // 12 characters for security as documented in README
+    const code = nanoid(8); // 8 characters for easier sharing as requested
     const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
 
     let hashedPassword = undefined;
