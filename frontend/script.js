@@ -559,20 +559,6 @@ document.addEventListener('DOMContentLoaded', function () {
     el.style.top = y + 'px';
   }
 
-  async function downloadFile(code, filename, originalname) {
-    showToast('Starting download...');
-    const url = `${API_BASE_URL}/api/download/${code}/${filename}`;
-
-    // Direct location change for the signed backend redirect
-    // This is the most reliable method for forcing downloads cross-origin.
-    window.location.href = url;
-
-    // We add a short timeout for the "complete" message since we don't know exactly when it finishes
-    setTimeout(() => {
-      showToast('Download started!');
-    }, 1000);
-  }
-
   function openQrScanner() {
     if (elements.qrModal) {
       elements.qrModal.style.display = 'block';

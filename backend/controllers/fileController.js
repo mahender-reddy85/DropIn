@@ -212,51 +212,6 @@ export const getFilesInfo = async (req, res) => {
   }
 };
 
-export const downloadFile = async (req, res) => {
-  try {
-    const { code, filename } = req.params;
-
-    const transfer = await Transfer.findOne({ code });
-
-    if (!transfer) {
-      return res.status(404).json({ error: 'Transfer not found or expired' });
-    }
-
-    // Check download limit
-    if (transfer.downloadsCount >= transfer.maxDownloads) {
-      return res.status(403).json({ error: 'Max downloads reached' });
-    }
-
-    const file = transfer.files.find(f => f.filename === filename);
-
-    if (!file) {
-      return res.status(404).json({ error: 'File not found' });
-    }
-
-    // Increment download count
-    transfer.downloadsCount += 1;
-    await transfer.save();
-
-    const resourceType = file.resourceType || getResourceType(file.mimetype, file.originalname);
-
-    const downloadUrl = cloudinary.url(file.public_id, {
-      resource_type: resourceType,
-      type: 'upload',
-      secure: true,
-      flags: 'attachment'
-    });
-
-    // Redirect to proper Cloudinary URL
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.redirect(302, downloadUrl);
-
-  } catch (error) {
-    console.error('Download error:', error);
-    res.status(500).json({ error: 'Download failed', details: error.message });
-  }
-};
-
 export const downloadAllFiles = async (req, res) => {
   try {
     const { code } = req.params;
@@ -277,11 +232,6 @@ export const downloadAllFiles = async (req, res) => {
       if (!isMatch) {
         return res.status(401).json({ error: 'Incorrect password' });
       }
-    }
-
-    // Check download limit
-    if (transfer.downloadsCount >= transfer.maxDownloads) {
-      return res.status(403).json({ error: 'Max downloads reached' });
     }
 
     if (!transfer.files || transfer.files.length === 0) {
@@ -311,7 +261,7 @@ export const downloadAllFiles = async (req, res) => {
     let skippedFiles = 0;
     
     for (const file of transfer.files) {
-      let resourceType = 'raw'; // Declare before try block for catch scope
+      let resourceType = 'raw'; // Default for PDFs, documents, zips
       try {
         resourceType = file.resourceType || getResourceType(file.mimetype, file.originalname);
 
@@ -335,16 +285,10 @@ export const downloadAllFiles = async (req, res) => {
 
       } catch (err) {
         skippedFiles++;
-        console.error(`Error with ${file.originalname} (type: ${file.mimetype}):`, err.message);
-        console.error('File details:', {
-          public_id: file.public_id,
-          mimetype: file.mimetype,
-          resourceTypeDetected: resourceType
-        });
+        console.error(`Error with ${file.originalname}:`, err.message);
       }
     }
     
-    // Finalize the archive
     archive.finalize();
 
     archive.on('error', (err) => {
@@ -357,63 +301,8 @@ export const downloadAllFiles = async (req, res) => {
   } catch (error) {
     console.error('Bulk download error:', error);
     if (!res.headersSent) {
-      res.status(500).json({ error: 'Bulk download failed', details: error.message });
+      res.status(500).json({ error: 'Bulk download failed' });
     }
-  }
-};
-
-export const deleteFile = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Find the transfer containing this file
-    const transfer = await Transfer.findOne({ 'files._id': id });
-    
-    if (!transfer) {
-      return res.status(404).json({ error: 'File not found' });
-    }
-    
-    // Find the specific file
-    const file = transfer.files.id(id);
-    if (!file) {
-      return res.status(404).json({ error: 'File not found' });
-    }
-    
-    // Delete from Cloudinary
-    try {
-      const resourceType = getResourceType(file.mimetype, file.originalname);
-      await cloudinary.uploader.destroy(file.public_id, {
-        resource_type: resourceType,
-        type: 'upload'
-      });
-    } catch (cloudinaryError) {
-      console.error('Cloudinary deletion error:', cloudinaryError);
-      // Continue with database deletion even if Cloudinary fails
-    }
-    
-    // Remove file from transfer
-    transfer.files.pull(id);
-    
-    // If no files left, delete the entire transfer
-    if (transfer.files.length === 0) {
-      await Transfer.deleteOne({ _id: transfer._id });
-      return res.json({ 
-        success: true, 
-        message: 'File deleted and transfer removed (no files remaining)' 
-      });
-    }
-    
-    await transfer.save();
-    
-    res.json({ 
-      success: true, 
-      message: 'File deleted successfully',
-      remainingFiles: transfer.files.length 
-    });
-    
-  } catch (error) {
-    console.error('Delete file error:', error);
-    res.status(500).json({ error: 'Failed to delete file', details: error.message });
   }
 };
 
@@ -425,16 +314,14 @@ export const deleteTransfer = async (req, res) => {
       return res.status(404).json({ error: 'Transfer not found' });
     }
 
-    // Verify password if provided on deletion or just allow deletion if they know the code?
-    // User requested "allow user to: delete files, extend expiry". Without user auth, they need the password or we just trust the person who knows the code. 
-
-      await Promise.allSettled(transfer.files.map(file => {
-        if (file.public_id) {
-          const resType = file.resourceType || getResourceType(file.mimetype, file.originalname);
-          return cloudinary.uploader.destroy(file.public_id, { resource_type: resType });
-        }
-        return Promise.resolve();
-      }));
+    // Delete files from Cloudinary
+    await Promise.allSettled(transfer.files.map(file => {
+      if (file.public_id) {
+        const resType = file.resourceType || getResourceType(file.mimetype, file.originalname);
+        return cloudinary.uploader.destroy(file.public_id, { resource_type: resType });
+      }
+      return Promise.resolve();
+    }));
 
     await Transfer.deleteOne({ _id: transfer._id });
     res.json({ success: true, message: 'Transfer deleted successfully' });
