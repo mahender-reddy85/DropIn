@@ -311,8 +311,9 @@ export const downloadAllFiles = async (req, res) => {
     let skippedFiles = 0;
     
     for (const file of transfer.files) {
+      let resourceType = 'raw'; // Declare before try block for catch scope
       try {
-        const resourceType = file.resourceType || getResourceType(file.mimetype, file.originalname);
+        resourceType = file.resourceType || getResourceType(file.mimetype, file.originalname);
 
         const downloadUrl = cloudinary.url(file.public_id, {
           resource_type: resourceType,
@@ -338,7 +339,7 @@ export const downloadAllFiles = async (req, res) => {
         console.error('File details:', {
           public_id: file.public_id,
           mimetype: file.mimetype,
-          resourceType: resourceType
+          resourceTypeDetected: resourceType
         });
       }
     }
