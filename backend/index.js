@@ -5,13 +5,24 @@ import app from './app.js';
 import mongoose from "mongoose";
 
 const PORT = process.env.PORT || 3001;
+const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+
+if (!mongoUri) {
+  console.error("❌ MONGO_URI or MONGODB_URI is not defined in environment variables!");
+}
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`✅ DropIn backend is running on port ${PORT}`);
 });
 
-// Use exact pattern for DB requested
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log(err));
+// Configure Mongoose to fail fast if no connection
+mongoose.set('bufferCommands', false);
+
+// Connect to MongoDB
+mongoose.connect(mongoUri)
+  .then(() => console.log("✅ MongoDB connected successfully"))
+  .catch(err => {
+    console.error("❌ MongoDB connection error:", err.message);
+    console.error("Please check if your IP is whitelisted in MongoDB Atlas and the MONGO_URI is correct.");
+  });
