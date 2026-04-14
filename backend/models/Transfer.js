@@ -18,15 +18,16 @@ const fileSchema = new mongoose.Schema({
 const transferSchema = new mongoose.Schema({
   code: { type: String, required: true, unique: true, index: true },
   files: [fileSchema],
-  expiresAt: { type: Date, default: () => new Date(Date.now() + 24 * 60 * 60 * 1000), index: true }, // 24 hours
+  expiresAt: { 
+    type: Date, 
+    default: () => new Date(Date.now() + 24 * 60 * 60 * 1000), 
+    index: { expires: 0 } 
+  }, // 24 hours
   password: { type: String },
   maxDownloads: { type: Number, default: 100 },
   downloadsCount: { type: Number, default: 0 },
   isDownloaded: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
-
-// TTL index for automatic deletion after expiry
-transferSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export default mongoose.model('Transfer', transferSchema);
