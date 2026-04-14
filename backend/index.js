@@ -7,22 +7,30 @@ import mongoose from "mongoose";
 const PORT = process.env.PORT || 3001;
 const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
 
-if (!mongoUri) {
-  console.error("❌ MONGO_URI or MONGODB_URI is not defined in environment variables!");
-}
-
-// Start server
-const server = app.listen(PORT, () => {
-  console.log(`✅ DropIn backend is running on port ${PORT}`);
-});
-
-// Configure Mongoose to fail fast if no connection
+// Configure Mongoose
 mongoose.set('bufferCommands', false);
 
-// Connect to MongoDB
-mongoose.connect(mongoUri)
-  .then(() => console.log("✅ MongoDB connected successfully"))
-  .catch(err => {
-    console.error("❌ MongoDB connection error:", err.message);
-    console.error("Please check if your IP is whitelisted in MongoDB Atlas and the MONGO_URI is correct.");
-  });
+const startServer = async () => {
+  try {
+    if (!mongoUri) {
+      throw new Error("MONGO_URI or MONGODB_URI is not defined in environment variables! Please check your Render environment settings.");
+    }
+
+    console.log("⏳ Connecting to MongoDB...");
+    await mongoose.connect(mongoUri);
+    console.log("✅ MongoDB connected successfully");
+
+    app.listen(PORT, () => {
+      console.log(`🚀 DropIn backend is running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("❌ Failed to start server:", err.message);
+    if (err.message.includes('whitelist')) {
+      console.error("👉 Tip: Make sure your IP is whitelisted in MongoDB Atlas (try 0.0.0.0/0 for testing).");
+    }
+    // Exit process so Render knows the service failed to start
+    process.exit(1);
+  }
+};
+
+startServer();
